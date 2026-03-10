@@ -54,6 +54,8 @@ public class UserController : ControllerBase
             return StatusCode(500, new ApiResponse<List<UserDto>> { Success = false, Message = "An internal server error occurred." });
         }
     }
+
+
     //delete user by id
     [HttpDelete]
     public async Task<ActionResult<ApiResponse<bool>>>DeleteUSerById([FromQuery] int id)
@@ -65,6 +67,8 @@ public class UserController : ControllerBase
         }
         return Ok(response);
     }
+
+    
     //get current logged in user
     [Authorize]
     [HttpGet("CurrentUser")]

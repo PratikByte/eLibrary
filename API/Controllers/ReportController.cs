@@ -18,7 +18,7 @@ public class ReportController : ControllerBase
         _mediator = mediator;
     }
 
-
+    // Endpoint to get available books with pagination
     [HttpGet("Avail-books")]
     public async Task<ActionResult<ApiResponse<List<BookDto>>>> GetAvailBooks(
                                                                   [FromQuery] int pageNumber = 1,
@@ -30,6 +30,8 @@ public class ReportController : ControllerBase
         return Ok(report);
     }
 
+    
+    // Endpoint to get overdue books report
     [HttpGet("OverDue-books")]
     public async Task<ActionResult<ApiResponse<List<BorrowRecordDto>>>> GetOverDueReport()
     {

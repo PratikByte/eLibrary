@@ -23,7 +23,7 @@ public class BookController : ControllerBase
        
         }
 
-    //correct cqrs
+    // Endpoint to get all books with pagination
     [HttpGet("paged")]
     public async Task<ActionResult<PagedResponse<BookDto>>> GetBooksPaged(
                                                                   [FromQuery] int pageNumber = 1,
@@ -34,7 +34,7 @@ public class BookController : ControllerBase
         return Ok(result);
     }
 
-//correct cqrs
+    // Endpoint to get only available books with pagination
     [HttpGet("availBook")]
     public async Task<ActionResult<PagedResponse<BookDto>>> GetAvailBook(
                                                                   [FromQuery] int pageNumber = 1,
@@ -48,7 +48,7 @@ public class BookController : ControllerBase
 
 
 
-    //correct cqrs
+   // Endpoint to add a new book 
     [HttpPost("AddBook")]
     public async Task<ActionResult<ApiResponse<int>>> AddBook([FromForm] CreateBookDto bookDto)
     {
@@ -58,8 +58,8 @@ public class BookController : ControllerBase
         return Ok(response);
     }
 
-    //correct cqrs
-    //update cover image
+   
+    // Endpoint to update book cover image
     [HttpPut("{id}/cover")]
     public async Task<ActionResult<ApiResponse<BookDto>>> UpdateCover(int id, IFormFile coverImage)
     {
@@ -67,8 +67,8 @@ public class BookController : ControllerBase
         return Ok(response);
     }
 
-    //correct cqrs
-    //delete cover image
+   
+    // Endpoint to delete book cover image
     [HttpDelete("{id}/cover")]
     public async Task<ActionResult<ApiResponse<bool>>>DeleteCover(int id)
     {
@@ -76,11 +76,9 @@ public class BookController : ControllerBase
         return Ok(response);
     }
 
-    //correct cqrs
-    //controller for getting data BY author
+   
+    // Endpoint to get books by author with pagination
     [HttpGet("author")]
-
-
     public async Task<ActionResult<ApiResponse<List<BookDto>>>> GetBookByAuthor(string author,[FromQuery] int pageNumber = 1,
                                                                         [FromQuery] int pageSize = 5)
     {
@@ -88,8 +86,8 @@ public class BookController : ControllerBase
         return Ok(response);
     }
 
-    //correct cqrs
-    //controller for getting book data BY Id  
+   
+    // Endpoint to get books by ID
     [HttpGet("{Bookid}")]
 
     public async Task<ActionResult<ApiResponse<BookDto>>> GetBookById(int Bookid)
@@ -102,22 +100,16 @@ public class BookController : ControllerBase
         return Ok(resonse);
     }
 
-
-
-    //i have confusued with this code
-    //getdata book bet range price
-
-    // [ServiceFilter(typeof(LogActionFilter))]  // Applied filter to this specific action
+    // Endpoint to get books by price range
     [HttpGet("Get_Betn_range")]
-    public async Task<ActionResult<ApiResponse<List<BookWithPriceDto>>>> GetBooksByPriceRange([FromQuery] GetBooksByPriceRangeQuery query)               //why used from query here?? istead of FromBody
+    public async Task<ActionResult<ApiResponse<List<BookWithPriceDto>>>> GetBooksByPriceRange([FromQuery] GetBooksByPriceRangeQuery query)               
 
     {
         var result = await _mediator.Send(query);
         return Ok(result);
     }
 
-    //check for implementing cqrs correctly resume endpoint
-
+    // Endpoint to update book price
     [HttpPut("update-price")]
     public async Task<ActionResult<ApiResponse<BookDto>>> UpdateBookPrice([FromBody] UpdateBookPriceCommand command)
     {
@@ -130,7 +122,7 @@ public class BookController : ControllerBase
     }
 
 
-
+    // Endpoint to delete a book by ID
     [HttpDelete("{id}")]
     public async Task<ActionResult<ApiResponse<bool>>> DeleteBook(int id)
     {
@@ -141,25 +133,5 @@ public class BookController : ControllerBase
         }
         return Ok(response);
     }
-
-    //Correct wrokin confiremed pratik
-    //where we can use it correclty i need to refractro logic in borrow and return book
-    //
-    // [HttpPut("increment")]
-    // public async Task<ActionResult<ApiResponse<bool>>> IncrementAvailableCount(int id)
-    // {
-    //     return await _bookRepository.IncreaseAvailBookCountAsync(id, CancellationToken.None) ?
-    //         Ok(ApiResponse<bool>.Ok(true, "Available count incremented.")) :
-    //         NotFound(ApiResponse<bool>.Fail("Book not found."));
-    // }
-    // [HttpPut("decrement")]
-    // public async Task<ActionResult<ApiResponse<bool>>> DecrementAvailableCount(int id)
-    // {
-    //     return await _bookRepository.DecreaseAvailBookCountAsync(id, CancellationToken.None) ?
-    //         Ok(ApiResponse<bool>.Ok(true, "Available count Decremented.")) :
-    //         NotFound(ApiResponse<bool>.Fail("Book not found."));
-    // }
-
-
 }
 

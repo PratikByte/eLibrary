@@ -17,6 +17,7 @@ public class UserProfileController : ControllerBase
         _mediator = mediator;
     }
 
+    // Endpoint to get user profile by ID
     [HttpGet("{id}")]
     public async Task<ActionResult> GetUserProfileById(int id)
     {
@@ -27,7 +28,8 @@ public class UserProfileController : ControllerBase
        }
        return Ok(response);
     }
-
+    
+    // Endpoint to update user profile by ID
     [HttpPut("{id}")]
     public async Task<ActionResult> UpdateProfile(int id, [FromForm] UserProfileDto userDto)
     {

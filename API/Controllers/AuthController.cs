@@ -15,7 +15,7 @@ public class AuthController : ControllerBase
     {
         _mediator = mediator;
     }
-
+    // Registration endpoint
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterUserDto request)
     {
@@ -32,7 +32,7 @@ public class AuthController : ControllerBase
     }
 
 
-
+    // Login endpoint that returns JWT token on successful authentication
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] UserLoginInputDto loginDto)
     {
@@ -52,14 +52,14 @@ public class AuthController : ControllerBase
         }
     }
 
-
+    // Endpoints for password reset using JWT token
     [HttpPost("forget-password-jwt")]
     public async Task<IActionResult> ForgetPasswordJWT([FromBody] ForgotPasswordCommandJWT  command)
     {
        var result = await _mediator.Send(command);
        return Ok(new { Message = "If email exists, reset token generated.", Token = result }); // For backend demo
     }
-
+    //reset password using JWT token
     [HttpPost("reset-password-jwt")]
     public async Task<IActionResult> ResetPasswordJWT([FromBody] ResetPasswordCommandJWT command)
     {
@@ -70,7 +70,7 @@ public class AuthController : ControllerBase
     }
 
 
-
+    //for OTP based password reset 
     [HttpPost("forget-password")]
     public async Task<IActionResult> ForgetPassword([FromBody] ForgotPasswordCommand command)
     {
@@ -78,6 +78,7 @@ public class AuthController : ControllerBase
         return Ok(result); // For backend demo
     }
 
+    //reset password using OTP
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordCommand command)
     {

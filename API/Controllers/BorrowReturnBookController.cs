@@ -15,7 +15,7 @@ public class BorrowReturnBookController : ControllerBase
     {
         _mediator = mediator;
     }
-
+    // Endpoint to borrow a book
     [HttpPost("borrow")]
     public async Task<IActionResult> BorrowBook([FromBody] BorrowBookCommand command)
     {
@@ -25,7 +25,7 @@ public class BorrowReturnBookController : ControllerBase
 
         return Ok(result);
     }
-
+    // Endpoint to return a book
     [HttpPost("return")]
     public async Task<IActionResult> ReturnBook([FromBody] ReturnBookCommand command)
     {

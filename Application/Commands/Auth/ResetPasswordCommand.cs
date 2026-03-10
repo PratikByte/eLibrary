@@ -30,16 +30,16 @@ public class ResetPasswordHandler:IRequestHandler<ResetPasswordCommand, string>
     {
         var user= _context.Users.FirstOrDefault(u => u.Email == request.Email);
         if(user==null)
-            return ("User with this email does not exist");
+            return "User with this email does not exist";
 
        var isValidOtp= await _otpService.ValidateOtpAsync(request.Email, request.Otp);
         if(!isValidOtp)
-          return  ("Invalid or expired OTP");
+          return  "Invalid or expired OTP";
     
 
         user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
         await _context.SaveChangesAsync();
-        return ("Password has been reset successfully");
+        return "Password has been reset successfully";
     }
 }
 
