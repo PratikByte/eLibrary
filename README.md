@@ -7,7 +7,6 @@ The system automatically updates book availability and sends email notifications
 
 - User registration and login with JWT Authentication
 - Role-Based Access Control (Admin / User)
-- Book CRUD operations for admin
 - Borrow and return book functionality
 - Automatic book availability count update
 - Email notifications for borrow and return actions
