@@ -107,10 +107,15 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Connection string to the database
-builder.Services.AddDbContext<EBookDBContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Connection string to the database locally
+// builder.Services.AddDbContext<EBookDBContext>(options =>
+//     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Connection string to the database in production (MySQL)
+builder.Services.AddDbContext<EBookDBContext>(options =>options.UseMySql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
+    ));
 // Repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IBorrowRepository, BorrowRepository>();
