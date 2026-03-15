@@ -10,7 +10,7 @@ The system automatically updates **book availability** and sends **email notific
 
 🚀 Live Swagger Documentation
 
-👉 https://your-elibrary-render-url/swagger/index.html
+👉 https://elibrary-vmhy.onrender.com/swagger/index.html
 
 You can directly test the API endpoints from the deployed Swagger UI.
 ---
