@@ -6,6 +6,14 @@ Users can **borrow and return books**, while admins can **manage books and view 
 The system automatically updates **book availability** and sends **email notifications** for borrow and return actions.
 
 ---
+🌐 Live API
+
+🚀 Live Swagger Documentation
+
+👉 https://your-elibrary-render-url/swagger/index.html
+
+You can directly test the API endpoints from the deployed Swagger UI.
+---
 
 ## 🚀 Features
 
@@ -28,7 +36,17 @@ The system automatically updates **book availability** and sends **email notific
 * JWT Authentication
 * Clean Architecture
 * CQRS Pattern
+* Docker
+* Render Deployment
 
+---
+## ☁ Deployment
+
+The API is deployed using cloud services and containerization:
+
+- **Render** – Hosts the ASP.NET Core API
+- **Railway** – Provides the MySQL database
+- **Docker** – Used for containerizing the application
 ---
 
 ## 📷 API Documentation (Swagger)
