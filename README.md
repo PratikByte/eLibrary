@@ -74,7 +74,7 @@ The API is deployed using cloud services and containerization:
 Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/eLibrary.git
+git clone https://github.com/PratikByte/eLibrary.git
 cd eLibrary
 ```
 
