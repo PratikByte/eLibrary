@@ -22,6 +22,7 @@ public class UserController : ControllerBase
         _logger = logger;
     }
     //get user by id
+    [Authorize(Roles = "Admin")]
     [HttpGet("{id}")]
     public async Task<ActionResult<ApiResponse<UserDto>>>GetUserById(int id)
     {
@@ -35,6 +36,7 @@ public class UserController : ControllerBase
 
     }
     //get all users with pagination
+    [Authorize(Roles = "Admin")]
     [HttpGet]
     public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetAllUsers([FromQuery]int pageNumber=1, [FromQuery] int pageSize=5, CancellationToken cancellationToken = default)
     {
@@ -57,6 +59,7 @@ public class UserController : ControllerBase
 
 
     //delete user by id
+    [Authorize(Roles = "Admin")]
     [HttpDelete]
     public async Task<ActionResult<ApiResponse<bool>>>DeleteUSerById([FromQuery] int id)
     {

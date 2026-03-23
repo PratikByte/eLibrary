@@ -6,7 +6,7 @@ namespace eLibrary.Infrastructure.Services;
 public class FileStorageOptions
 {
     // Root on disk where files are stored (served via StaticFiles)
-    public string RootPath { get; set; } = "wwwroot/uploads";
+    public string RootPath { get; set; } = "wwwroot";
 }
 public class LocalFileStorage: IFileStorage
 {
@@ -29,7 +29,7 @@ public class LocalFileStorage: IFileStorage
 
     public async Task<string> SaveAsync(string scope, string safeFileName, Stream content, CancellationToken cancellationToken)
     {
-        // scope groups files per book, e.g. "books/123"
+        // scope is the public folder name, e.g. "book-covers"
         var folder = Path.Combine(_root, scope);
         Directory.CreateDirectory(folder);
 

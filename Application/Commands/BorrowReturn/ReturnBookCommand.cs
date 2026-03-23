@@ -7,7 +7,7 @@ using eLibrary.Shared;
 
 namespace EBook.CQRS.Command
 {
-    public record ReturnBookCommand(int BorrowId) : IRequest<ApiResponse<BorrowRecordDto>>;
+    public record ReturnBookCommand(int BorrowId, int? CurrentUserId = null, bool IsAdmin = false) : IRequest<ApiResponse<BorrowRecordDto>>;
 }
 public class ReturnBookCommandHandler : IRequestHandler<ReturnBookCommand, ApiResponse<BorrowRecordDto>>
 {
@@ -38,6 +38,10 @@ public class ReturnBookCommandHandler : IRequestHandler<ReturnBookCommand, ApiRe
                 return ApiResponse<BorrowRecordDto>.Fail($"Borrow record with ID {request.BorrowId} not found.");
             }
 
+            if (!request.IsAdmin && (!request.CurrentUserId.HasValue || request.CurrentUserId.Value != borrowRecord.UserId))
+            {
+                return ApiResponse<BorrowRecordDto>.Fail("You are not allowed to return this book.");
+            }
 
             if (borrowRecord.IsReturned)
             {

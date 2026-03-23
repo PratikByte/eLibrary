@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using eLibrary.Application.Common.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -108,14 +109,14 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Connection string to the database locally
-// builder.Services.AddDbContext<EBookDBContext>(options =>
-//     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<EBookDBContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Connection string to the database in production (MySQL)
-builder.Services.AddDbContext<EBookDBContext>(options =>options.UseMySql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
-    ));
+// builder.Services.AddDbContext<EBookDBContext>(options =>options.UseMySql(
+//         builder.Configuration.GetConnectionString("DefaultConnection"),
+//         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
+//     ));
 // Repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IBorrowRepository, BorrowRepository>();
@@ -166,6 +167,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+BookHelper.Configure(app.Services.GetRequiredService<IHttpContextAccessor>());
+
 app.UseCors("AllowReactApp");
 
 // HTTP request pipeline
@@ -177,12 +180,12 @@ app.UseCors("AllowReactApp");
 
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 
 // Add Authentication middleware before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.UseStaticFiles();
 
 app.Run();

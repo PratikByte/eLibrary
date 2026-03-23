@@ -2,13 +2,14 @@
 using eLibrary.Application.Queries.Books;
 using eLibrary.Shared;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace eLibrary.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-// [Authorize(Roles = "Admin")]
+ [Authorize(Roles = "Admin")]
 public class ReportController : ControllerBase
 {
     private readonly IMediator _mediator;

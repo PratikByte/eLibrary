@@ -2,11 +2,11 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using BookStoreAPI_updated.Model;
 using eLibrary.Application.Interfaces.Repositories;
 using eLibrary.Shared;
 using eLibrary.Application.DTOs;
 using MediatR;
+using eLibrary.Application.Common.Helpers;
 
 public class UpdateBookPriceCommand : IRequest<ApiResponse<BookDto>>
 {

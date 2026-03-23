@@ -20,14 +20,18 @@ public class TokenService : ITokenService
 
     public Task<string> GenerateToken(User user)
     {
+        var normalizedRole = NormalizeRole(user.Role);
+
         // 🧠 Professor X reading user’s mind and extracting identity
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()), // 🕵️‍♂️ Assigning unique hero ID
+            new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // 🎯 One-time mission ID (Prevents replay attacks)
             new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64), // ⏳ When the mission starts
-            new Claim(ClaimTypes.Role, user.Role), // 🛡 Assigning hero rank (Admin/User)
-            new Claim(JwtRegisteredClaimNames.Email, user.Email) // 📧 S.H.I.E.L.D email registration
+            new Claim(ClaimTypes.Role, normalizedRole), // 🛡 Assigning hero rank (Admin/User)
+            new Claim(JwtRegisteredClaimNames.Email, user.Email), // 📧 S.H.I.E.L.D email registration
+            new Claim(ClaimTypes.Email, user.Email)
         };
 
         // 💎 Retrieving the secret Infinity Key to sign the token
@@ -52,6 +56,16 @@ public class TokenService : ITokenService
         // 🚀 Sending token to client like Tony’s AI Friday does
         var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
         return Task.FromResult(tokenString);
+    }
+
+    private static string NormalizeRole(string? role)
+    {
+        if (string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Admin";
+        }
+
+        return "User";
     }
 
     public Task <string> GeneratePasswordResetToken(int userId)

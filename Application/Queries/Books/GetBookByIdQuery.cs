@@ -1,8 +1,8 @@
-﻿using BookStoreAPI_updated.Model;
-using eLibrary.Application.Interfaces.Repositories;
+﻿using eLibrary.Application.Interfaces.Repositories;
 using eLibrary.Shared;
 using eLibrary.Application.DTOs;
 using MediatR;
+using eLibrary.Application.Common.Helpers;
 
 namespace eLibrary.Application.Queries.Books;
 

@@ -1,9 +1,9 @@
-﻿using BookStoreAPI_updated.Model;
-using MediatR;
+﻿using MediatR;
 using eLibrary.Application.DTOs;
 using eLibrary.Application.Interfaces.Repositories;
 using eLibrary.Application.Interfaces.Services;
 using eLibrary.Shared;
+using eLibrary.Application.Common.Helpers;
 
 namespace eLibrary.Application.Commands.Books;
 
@@ -67,9 +67,9 @@ public async Task<ApiResponse<BookDto>> Handle(
                 $"No book found with Id {request.BookId}");
         }
 
-        // 3️⃣ Decide where this file belongs (logical grouping)
-        // Example: uploads/books/12/
-        var scope = $"books/{book.Id}";
+        // 3️⃣ Store every book cover in one shared public folder.
+        // Keep this as "book-covers" so all cover URLs stay flat and predictable.
+        var scope = "book-covers";
 
         // Extract safe file name (prevents path injection)
         var safeName = Path.GetFileName(request.CoverImage.FileName);

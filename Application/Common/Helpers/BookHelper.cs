@@ -1,7 +1,8 @@
 ﻿using eLibrary.Domain.Entities;
 using eLibrary.Application.DTOs;
+using System.IO;
 
-namespace BookStoreAPI_updated.Model;
+namespace eLibrary.Application.Common.Helpers;
 
     //list of books to dto
     public class BookHelper
@@ -25,9 +26,9 @@ namespace BookStoreAPI_updated.Model;
         }
 
         // ✅ For Single Book to DTO 
-        public static BookDto MapBookToDto(Book book)
-        {
-            if (book == null) return null!; // handle null case safely
+    public static BookDto MapBookToDto(Book book)
+    {
+        if (book == null) return null!; // handle null case safely
     
             var baseUrl = GetBaseUrl();
 
@@ -37,9 +38,12 @@ namespace BookStoreAPI_updated.Model;
                 Author = book.Author,
                 //Price = book.Price,
                 AvailableCount = book.AvailableCount,
+                // Build a full public URL so clients can open the cover image directly.
                 CoverImageUrl = string.IsNullOrEmpty(book.CoverImagePath)
             ? null
-            : $"{baseUrl}/{book.CoverImagePath.Replace("\\", "/")}"
+            : File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", book.CoverImagePath))
+                ? $"{baseUrl}/{book.CoverImagePath.Replace("\\", "/")}"
+                : null
             };
         }
         public static List<BookWithPriceDto> MapPriceBooksToDto(List<Book> books)
@@ -53,12 +57,19 @@ namespace BookStoreAPI_updated.Model;
         {
             if (book == null) return null!; // handle null case safely
 
+            var baseUrl = GetBaseUrl();
+
             return new BookWithPriceDto
             {   Id = book.Id,
                 Title = book.Title,
                 Author = book.Author,
                 Price = book.Price,
-                AvailableCount = book.AvailableCount
+                AvailableCount = book.AvailableCount,
+                CoverImageUrl = string.IsNullOrEmpty(book.CoverImagePath)
+            ? null
+            : File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", book.CoverImagePath))
+                ? $"{baseUrl}/{book.CoverImagePath.Replace("\\", "/")}"
+                : null
             };
         }
 

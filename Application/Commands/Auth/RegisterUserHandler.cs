@@ -29,6 +29,7 @@ public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, Register
         {
             Email = request.RegisterUserDto.Email,
             Username = request.RegisterUserDto.Username,
+            Role = "User"
         };
 
         user.PasswordHash=_passwordHasher.HashPassword(user, request.RegisterUserDto.Password);
