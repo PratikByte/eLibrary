@@ -2,6 +2,7 @@
 using MediatR;
 using eLibrary.Application.DTOs;
 using eLibrary.Application.Interfaces.Repositories;
+using eLibrary.Application.Interfaces.Services;
 using eLibrary.Infrastructure.Services;
 using eLibrary.Shared;
 
@@ -15,10 +16,10 @@ public class ReturnBookCommandHandler : IRequestHandler<ReturnBookCommand, ApiRe
     private readonly ILogger<ReturnBookCommandHandler> _logger;
     private readonly IBookRepository _bookRepository;
     private readonly INotificationService _notificationService;
-    private readonly EmailService _emailService;
+    private readonly IEmailService _emailService;
     private readonly IUserRepository _userRepository;
 
-    public ReturnBookCommandHandler(IBorrowRepository borrowRepository, ILogger<ReturnBookCommandHandler> logger, IBookRepository bookRepository, INotificationService notificationService, EmailService emailService, IUserRepository userRepository)
+    public ReturnBookCommandHandler(IBorrowRepository borrowRepository, ILogger<ReturnBookCommandHandler> logger, IBookRepository bookRepository, INotificationService notificationService, IEmailService emailService, IUserRepository userRepository)
     {
         _borrowRepository = borrowRepository;
         _logger = logger;
@@ -89,21 +90,43 @@ public class ReturnBookCommandHandler : IRequestHandler<ReturnBookCommand, ApiRe
             string message = (dto.Fine.HasValue && dto.Fine > 0)
                                      ? $"Book returned with fine ₹{dto.Fine}"
                                                     : "Book returned successfully.";
+            string? warning = null;
 
-            //send email notification
+            // Email notification is optional so the return flow succeeds even if SMTP is down.
             var user = await _userRepository.GetUserByIdAsync(borrowRecord.UserId, cancellationToken);
             var bookResponse = await _bookRepository.GetBookByIdAsync(borrowRecord.BookId,cancellationToken);
 
             var title= bookResponse?.Title ?? "the book you borrowed";
-            var UserName=user?.Username ?? "User";
-            var UserEmail = user?.Email??"FailedReturnNotification@gmail.com";//if not fouond sent to fail email
+            var userName = user?.Username ?? "User";
 
-            var (subject, body) = await _notificationService
-               .ReturnBookConfirmationEmail(dto, UserName, title);
+            if (string.IsNullOrWhiteSpace(user?.Email))
+            {
+                warning = "Book returned successfully, but confirmation email could not be sent because the user email is missing.";
+                _logger.LogWarning(
+                    "Return confirmation email skipped for BorrowId {BorrowId} because user email is missing.",
+                    request.BorrowId);
+            }
+            else
+            {
+                try
+                {
+                    var (subject, body) = await _notificationService
+                       .ReturnBookConfirmationEmail(dto, userName, title);
 
-            await _emailService.SendEmailAsync(UserEmail, subject, body);
+                    await _emailService.SendEmailAsync(user.Email, subject, body);
+                }
+                catch (Exception ex)
+                {
+                    warning = "Book returned successfully, but confirmation email could not be sent.";
+                    _logger.LogWarning(
+                        ex,
+                        "Return confirmation email failed for BorrowId {BorrowId}, UserId {UserId}",
+                        request.BorrowId,
+                        borrowRecord.UserId);
+                }
+            }
 
-            return ApiResponse<BorrowRecordDto>.Ok(dto, message);
+            return ApiResponse<BorrowRecordDto>.Ok(dto, message, warning);
         }
         catch (Exception ex)
         {           

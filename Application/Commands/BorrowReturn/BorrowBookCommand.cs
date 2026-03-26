@@ -2,6 +2,7 @@
 using MediatR;
 using eLibrary.Application.DTOs;
 using eLibrary.Application.Interfaces.Repositories;
+using eLibrary.Application.Interfaces.Services;
 using eLibrary.Infrastructure.Services;
 using eLibrary.Shared;
 using eLibrary.Domain.Entities;
@@ -15,13 +16,13 @@ namespace EBook.CQRS.Command
 public class BorrowBookCommandHandler : IRequestHandler<BorrowBookCommand, ApiResponse<BorrowRecordDto>>
 {
     private readonly IBorrowRepository _borrowRepository;
-        private readonly IBookRepository _bookRepository;
+    private readonly IBookRepository _bookRepository;
     private readonly ILogger<BorrowBookCommandHandler> _logger;
     private readonly INotificationService _notificationService;
-    private readonly EmailService _emailService;
+    private readonly IEmailService _emailService;
     private readonly IUserRepository _userRepository;
 
-    public BorrowBookCommandHandler(IBorrowRepository borrowRepository, IBookRepository bookRepository, ILogger<BorrowBookCommandHandler> logger, INotificationService notificationService, EmailService emailService, IUserRepository userRepository)
+    public BorrowBookCommandHandler(IBorrowRepository borrowRepository, IBookRepository bookRepository, ILogger<BorrowBookCommandHandler> logger, INotificationService notificationService, IEmailService emailService, IUserRepository userRepository)
     {
         _borrowRepository = borrowRepository;
         _bookRepository = bookRepository;
@@ -94,17 +95,28 @@ public class BorrowBookCommandHandler : IRequestHandler<BorrowBookCommand, ApiRe
                 //Fine = borrowRecord.Fine
             };
 
-            // 6. Send email
-            var (subject, body) = await _notificationService
-                .GenerateBorrowConfirmationEmail(borrowRecordDto, user.Username, bookDetails.Title);
+            var message = $"Book borrowed successfully. Please return by {borrowRecord.DueDate:dd-MMM-yyyy}.";
+            string? warning = null;
 
-            await _emailService.SendEmailAsync(user.Email, subject, body);
+            // Email notification is optional so the borrow flow succeeds even if SMTP is down.
+            try
+            {
+                var (subject, body) = await _notificationService
+                    .GenerateBorrowConfirmationEmail(borrowRecordDto, user.Username, bookDetails.Title);
 
-            // 7. Return response
-            return ApiResponse<BorrowRecordDto>.Ok(
-                borrowRecordDto,
-                $"Book borrowed successfully. Please return by {borrowRecord.DueDate:dd-MMM-yyyy}."
-            );
+                await _emailService.SendEmailAsync(user.Email, subject, body);
+            }
+            catch (Exception ex)
+            {
+                warning = "Book borrowed successfully, but confirmation email could not be sent.";
+                _logger.LogWarning(
+                    ex,
+                    "Borrow confirmation email failed for UserId {UserId}, BookId {BookId}",
+                    request.UserId,
+                    request.BookId);
+            }
+
+            return ApiResponse<BorrowRecordDto>.Ok(borrowRecordDto, message, warning);
         }
         catch (Exception ex)
         {
