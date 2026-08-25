@@ -50,16 +50,18 @@ public class AddBookCommandHandler  : IRequestHandler<AddBookCommand, ApiRespons
             string ?coverImagePath = null;
 
             // ✅ Handle cover image if provided
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(request.BookDto.CoverImage.FileName);
-
-            var fullPath=Path.Combine(_coverFolder, fileName);
-
-            using (var stream = new FileStream(fullPath, FileMode.Create))
+            if (request.BookDto.CoverImage is not null)
             {
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(request.BookDto.CoverImage.FileName);
+                var fullPath = Path.Combine(_coverFolder, fileName);
+
+                using var stream = new FileStream(fullPath, FileMode.Create);
                 await request.BookDto.CoverImage.CopyToAsync(stream, cancellationToken);
+
+                // Store relative path
+                coverImagePath = Path.Combine("book-covers", fileName);
             }
-            // Store relative path
-            coverImagePath = Path.Combine("book-covers", fileName);
+
             // ✅ Map DTO → Entity
             var newBook = new Book
             {

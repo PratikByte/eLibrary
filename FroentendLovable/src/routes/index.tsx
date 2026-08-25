@@ -1,0 +1,130 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { BookMarked, Clock, Coins, Library, BookOpen, ArrowLeftRight, UserCircle } from "lucide-react";
+import { UserLayout } from "@/components/UserLayout";
+import { SectionCard } from "@/components/SectionCard";
+import { StatCard } from "@/components/StatCard";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { sampleBooks, sampleLoans } from "@/lib/placeholder-data";
+
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "My Dashboard — eLibrary" },
+      {
+        name: "description",
+        content: "Your borrowed books, due dates and reading recommendations in one place.",
+      },
+      { property: "og:title", content: "My Dashboard — eLibrary" },
+      {
+        property: "og:description",
+        content: "Your borrowed books, due dates and reading recommendations in one place.",
+      },
+    ],
+  }),
+  component: UserDashboardPage,
+});
+
+function UserDashboardPage() {
+  const myLoans = sampleLoans.filter((loan) => loan.member === "Aarav Shah");
+
+  return (
+    <UserLayout title="Dashboard" subtitle="Welcome back, Aarav" searchPlaceholder="Search the catalog…">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Books borrowed"
+          value="2"
+          hint="Limit: 5 at a time"
+          icon={BookMarked}
+          iconBgColor="#DFF3F5"
+          iconColor="#087F8C"
+        />
+        <StatCard
+          label="Due this week"
+          value="1"
+          hint="Return by 22 Aug"
+          icon={Clock}
+          iconBgColor="#DDF5EE"
+          iconColor="#008A72"
+        />
+        <StatCard
+          label="Outstanding fines"
+          value="20"
+          icon={Coins}
+          iconBgColor="#FFE8E5"
+          iconColor="#D94A38"
+        />
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        <SectionCard
+          title="Current loans"
+          description="Books you have at home"
+          className="lg:col-span-2"
+          action={
+            <Button asChild variant="outline" size="sm">
+              <Link to="/my-loans">View all</Link>
+            </Button>
+          }
+        >
+          <ul className="divide-y divide-border">
+            {myLoans.map((loan) => (
+              <li key={loan.id} className="flex items-center justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{loan.title}</p>
+                  <p className="text-xs text-muted-foreground">Due {loan.due}</p>
+                </div>
+                {loan.status === "Overdue" ? (
+                  <Badge variant="destructive">Overdue</Badge>
+                ) : (
+                  <Badge variant="secondary">Active</Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+
+        <SectionCard title="Quick actions">
+          <div className="grid gap-2">
+            <Button asChild>
+              <Link to="/catalog">
+                <Library className="h-4 w-4" /> Browse catalog
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/my-loans">
+                <ArrowLeftRight className="h-4 w-4" /> Return a book
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/profile">
+                <UserCircle className="h-4 w-4" /> Edit profile
+              </Link>
+            </Button>
+          </div>
+        </SectionCard>
+      </div>
+
+      <SectionCard title="New in the library" description="Recently added titles">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {sampleBooks.slice(0, 3).map((book) => (
+            <div key={book.id} className="flex gap-3 rounded-lg border border-border p-3">
+              <span className="grid h-16 w-12 shrink-0 place-items-center rounded-md bg-accent text-accent-foreground">
+                <BookOpen className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{book.title}</p>
+                <p className="truncate text-xs text-muted-foreground">{book.author}</p>
+                <Button asChild variant="link" size="sm" className="h-auto p-0">
+                  <Link to="/books/$bookId" params={{ bookId: String(book.id) }}>
+                    View details
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+    </UserLayout>
+  );
+}

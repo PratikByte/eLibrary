@@ -36,11 +36,18 @@ builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",
-        builder =>
+        policy =>
         {
-            builder.WithOrigins("http://localhost:5173")
-                   .AllowAnyHeader()
-                   .AllowAnyMethod();
+            policy.WithOrigins(
+                    "http://localhost:5173",
+                    "http://127.0.0.1:5173",
+                    "http://localhost:3000",
+                    "http://127.0.0.1:3000",
+                    "http://localhost:8080"
+                    )
+
+                .AllowAnyHeader()
+                .AllowAnyMethod();
         });
 });
 
@@ -53,8 +60,6 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.WriteIndented = true; // 👈 pretty print
 });
-
-builder.Services.AddControllers();
 
 builder.Services
     .AddFluentValidationAutoValidation()
@@ -109,14 +114,14 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Connection string to the database locally
-// builder.Services.AddDbContext<EBookDBContext>(options =>
-//     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<EBookDBContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Connection string to the database in production (MySQL)
-builder.Services.AddDbContext<EBookDBContext>(options =>options.UseMySql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
-    ));
+// builder.Services.AddDbContext<EBookDBContext>(options =>options.UseMySql(
+//         builder.Configuration.GetConnectionString("DefaultConnection"),
+//         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
+//     ));
 // Repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IBorrowRepository, BorrowRepository>();
