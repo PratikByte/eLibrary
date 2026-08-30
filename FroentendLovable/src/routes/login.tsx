@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthCard } from "@/components/AuthCard";
-import { apiRequest, AUTH_SESSION_KEY, type AuthSession } from "@/lib/api";
+import { login } from "@/lib/api";
 import { useState, type FormEvent } from "react";
 
 export const Route = createFileRoute("/login")({
@@ -35,15 +35,10 @@ function LoginPage() {
 
     const formData = new FormData(event.currentTarget);
     try {
-      const response = await apiRequest<AuthSession>("/api/Auth/login", {
-        method: "POST",
-        body: {
-          Username: formData.get("username"),
-          Password: formData.get("password"),
-        },
-      });
-      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(response));
-      localStorage.setItem("eLibrary.token", response.token);
+      const response = await login(
+        String(formData.get("username") ?? ""),
+        String(formData.get("password") ?? ""),
+      );
       window.location.assign(response.role.toLowerCase() === "admin" ? "/admin" : "/");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to sign in.");

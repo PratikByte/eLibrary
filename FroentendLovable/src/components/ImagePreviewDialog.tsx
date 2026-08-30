@@ -28,13 +28,13 @@ export function ImagePreviewDialog({
   title: string;
   imageUrl?: string | undefined;
   allowChange?: boolean | undefined;
-  onImageSelected?: ((previewUrl: string) => void) | undefined;
+  onImageSelected?: ((previewUrl: string, file: File) => void) | undefined;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (file: File | undefined) => {
     if (!file) return;
-    onImageSelected?.(URL.createObjectURL(file));
+    onImageSelected?.(URL.createObjectURL(file), file);
   };
 
   return (

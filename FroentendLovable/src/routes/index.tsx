@@ -5,7 +5,10 @@ import { SectionCard } from "@/components/SectionCard";
 import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { sampleBooks, sampleLoans } from "@/lib/placeholder-data";
+import { sampleLoans } from "@/lib/placeholder-data";
+import { getAuthSession, getBooksPaged, mapBookDto } from "@/lib/api";
+import type { Book } from "@/lib/placeholder-data";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,10 +29,28 @@ export const Route = createFileRoute("/")({
 });
 
 function UserDashboardPage() {
+  const [displayName, setDisplayName] = useState("reader");
   const myLoans = sampleLoans.filter((loan) => loan.member === "Aarav Shah");
+  const [recentBooks, setRecentBooks] = useState<Book[]>([]);
+
+  useEffect(() => {
+    setDisplayName(getAuthSession()?.username ?? "reader");
+
+    let cancelled = false;
+    getBooksPaged(1, 3)
+      .then((response) => {
+        if (!cancelled) setRecentBooks((response.data ?? []).map(mapBookDto));
+      })
+      .catch(() => {
+        if (!cancelled) setRecentBooks([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
-    <UserLayout title="Dashboard" subtitle="Welcome back, Aarav" searchPlaceholder="Search the catalog…">
+    <UserLayout title="Dashboard" subtitle={`Welcome back, ${displayName}`} searchPlaceholder="Search the catalog…">
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           label="Books borrowed"
@@ -107,10 +128,14 @@ function UserDashboardPage() {
 
       <SectionCard title="New in the library" description="Recently added titles">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {sampleBooks.slice(0, 3).map((book) => (
+          {recentBooks.map((book) => (
             <div key={book.id} className="flex gap-3 rounded-lg border border-border p-3">
-              <span className="grid h-16 w-12 shrink-0 place-items-center rounded-md bg-accent text-accent-foreground">
-                <BookOpen className="h-5 w-5" />
+              <span className="grid h-16 w-12 shrink-0 place-items-center overflow-hidden rounded-md bg-accent text-accent-foreground">
+                {book.cover ? (
+                  <img src={book.cover} alt={book.title} className="h-full w-full object-cover" />
+                ) : (
+                  <BookOpen className="h-5 w-5" />
+                )}
               </span>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{book.title}</p>

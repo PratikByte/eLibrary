@@ -13,13 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { Member } from "@/lib/placeholder-data";
 
 export type MemberDialogMode = "view" | "edit";
@@ -27,9 +20,7 @@ export type MemberDialogMode = "view" | "edit";
 /**
  * Member profile card shown in a dialog (admin only).
  * - mode "view": read-only details
- * - mode "edit": same card with editable fields + Save / Cancel
- *
- * Saving is local only for now (visual placeholder) until the API is connected.
+ * - mode "edit": username, email and photo can be updated
  */
 export function MemberDetailsDialog({
   member,
@@ -42,13 +33,15 @@ export function MemberDetailsDialog({
   mode: MemberDialogMode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave?: (member: Member) => void;
+  onSave?: (member: Member, profileImage?: File | null) => void;
 }) {
   const [draft, setDraft] = useState<Member | null>(member);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
 
   useEffect(() => {
     setDraft(member);
+    setPhotoFile(null);
   }, [member, mode, open]);
 
   if (!member || !draft) return null;
@@ -134,27 +127,7 @@ export function MemberDetailsDialog({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="member-edit-role">Role</Label>
-                <Select
-                  value={draft.role}
-                  onValueChange={(value) => update({ role: value as Member["role"] })}
-                >
-                  <SelectTrigger id="member-edit-role">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Member">Member</SelectItem>
-                    <SelectItem value="Admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="member-edit-loans">Active loans</Label>
-                <Input
-                  id="member-edit-loans"
-                  type="number"
-                  value={draft.loans}
-                  onChange={(event) => update({ loans: Number(event.target.value) })}
-                />
+                <Input id="member-edit-role" value={draft.role} disabled />
               </div>
             </div>
           ) : (
@@ -169,7 +142,7 @@ export function MemberDetailsDialog({
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Active loans</dt>
-                <dd className="text-sm font-medium">{draft.loans}</dd>
+                <dd className="text-sm font-medium">{draft.loans || "—"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Joined</dt>
@@ -187,7 +160,7 @@ export function MemberDetailsDialog({
               </Button>
               <Button
                 onClick={() => {
-                  onSave?.(draft);
+                  onSave?.(draft, photoFile);
                   onOpenChange(false);
                 }}
               >
@@ -207,7 +180,10 @@ export function MemberDetailsDialog({
           title={draft.name}
           imageUrl={draft.avatar}
           allowChange={isEdit}
-          onImageSelected={(previewUrl) => update({ avatar: previewUrl })}
+          onImageSelected={(previewUrl, file) => {
+            setPhotoFile(file);
+            update({ avatar: previewUrl });
+          }}
         />
       </DialogContent>
     </Dialog>

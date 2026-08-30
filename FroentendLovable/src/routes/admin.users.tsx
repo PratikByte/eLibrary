@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Trash2, Eye, Plus, Pencil } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -6,6 +6,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { MemberDetailsDialog, type MemberDialogMode } from "@/components/MemberDetailsDialog";
 import { SectionCard } from "@/components/SectionCard";
 import { FilterBar, FilterField } from "@/components/FilterBar";
+import { ListPagination } from "@/components/list-pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -26,7 +26,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { sampleMembers, type Member } from "@/lib/placeholder-data";
+import type { Member } from "@/lib/placeholder-data";
+import {
+  DEFAULT_PAGE_SIZE,
+  deleteUser,
+  getUsersPaged,
+  mapUserDto,
+  updateUserProfile,
+} from "@/lib/api";
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({
@@ -44,25 +51,65 @@ export const Route = createFileRoute("/admin/users")({
 });
 
 function AdminUsersPage() {
-  const [members, setMembers] = useState<Member[]>(sampleMembers);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [dialogMode, setDialogMode] = useState<MemberDialogMode>("view");
+
+  const loadUsers = useCallback(async (pageNumber = 1) => {
+    setError(null);
+    try {
+      const response = await getUsersPaged(pageNumber, DEFAULT_PAGE_SIZE);
+      setMembers((response.data ?? []).map(mapUserDto));
+      setPage(response.pageNumber || pageNumber);
+      setTotalPages(response.totalPages || 1);
+      setTotalRecords(response.totalRecords || (response.data ?? []).length);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to load members.");
+      setMembers([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadUsers(1);
+  }, [loadUsers]);
 
   const openMember = (member: Member, mode: MemberDialogMode) => {
     setSelectedMember(member);
     setDialogMode(mode);
   };
 
-  const handleSave = (updated: Member) => {
-    setMembers((current) => current.map((item) => (item.id === updated.id ? updated : item)));
-    setSelectedMember(null);
+  const handleSave = async (updated: Member, profileImage?: File | null) => {
+    try {
+      await updateUserProfile(updated.id, {
+        username: updated.name,
+        email: updated.email,
+        profileImage: profileImage ?? null,
+      });
+      setInfo(`Updated ${updated.name}.`);
+      setSelectedMember(null);
+      await loadUsers(page);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to update this member.");
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!memberToDelete) return;
-    setMembers((current) => current.filter((item) => item.id !== memberToDelete.id));
-    setMemberToDelete(null);
+    try {
+      await deleteUser(memberToDelete.id);
+      setInfo(`Removed ${memberToDelete.name}.`);
+      setMemberToDelete(null);
+      await loadUsers(page);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to remove this member.");
+      setMemberToDelete(null);
+    }
   };
 
   return (
@@ -100,12 +147,14 @@ function AdminUsersPage() {
         </FilterField>
       </FilterBar>
 
-      <SectionCard
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {info ? <p className="text-sm text-muted-foreground">{info}</p> : null}
 
+      <SectionCard
         title="Members"
-        description={`${members.length} registered accounts`}
+        description={`${totalRecords} registered accounts`}
         action={
-          <Button size="sm">
+          <Button size="sm" disabled title="Members register themselves; no admin create-user API exists.">
             <Plus className="h-4 w-4" /> Add member
           </Button>
         }
@@ -147,8 +196,8 @@ function AdminUsersPage() {
                       {member.role}
                     </Badge>
                   </TableCell>
-                  <TableCell>{member.loans}</TableCell>
-                  <TableCell className="text-muted-foreground">{member.joined}</TableCell>
+                  <TableCell>—</TableCell>
+                  <TableCell className="text-muted-foreground">—</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button
@@ -180,12 +229,12 @@ function AdminUsersPage() {
                       </Button>
                     </div>
                   </TableCell>
-
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
+        <ListPagination page={page} totalPages={totalPages} onPageChange={(next) => void loadUsers(next)} />
       </SectionCard>
 
       <MemberDetailsDialog
@@ -195,7 +244,7 @@ function AdminUsersPage() {
         onOpenChange={(open) => {
           if (!open) setSelectedMember(null);
         }}
-        onSave={handleSave}
+        onSave={(updated, profileImage) => void handleSave(updated, profileImage)}
       />
 
       <ConfirmDialog
@@ -212,7 +261,7 @@ function AdminUsersPage() {
         confirmLabel="Remove"
         cancelLabel="Cancel"
         variant="destructive"
-        onConfirm={handleDelete}
+        onConfirm={() => void handleDelete()}
       />
     </AdminLayout>
   );

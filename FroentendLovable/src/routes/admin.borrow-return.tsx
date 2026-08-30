@@ -1,3 +1,4 @@
+import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowLeftRight, Repeat } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -15,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { sampleLoans } from "@/lib/placeholder-data";
+import { borrowBook, returnBook } from "@/lib/api";
 
 export const Route = createFileRoute("/admin/borrow-return")({
   head: () => ({
@@ -32,39 +34,93 @@ export const Route = createFileRoute("/admin/borrow-return")({
 });
 
 function AdminBorrowReturnPage() {
+  const [borrowError, setBorrowError] = useState<string | null>(null);
+  const [borrowInfo, setBorrowInfo] = useState<string | null>(null);
+  const [returnError, setReturnError] = useState<string | null>(null);
+  const [returnInfo, setReturnInfo] = useState<string | null>(null);
+  const [isBorrowing, setIsBorrowing] = useState(false);
+  const [isReturning, setIsReturning] = useState(false);
+
+  async function handleBorrow(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    setBorrowError(null);
+    setBorrowInfo(null);
+    setIsBorrowing(true);
+    try {
+      const record = await borrowBook(
+        Number(formData.get("userId")),
+        Number(formData.get("bookId")),
+      );
+      setBorrowInfo(
+        `Issued "${record.bookName ?? "book"}" to ${record.userName ?? "member"}. Due ${record.dueDate}.`,
+      );
+      form.reset();
+    } catch (requestError) {
+      setBorrowError(requestError instanceof Error ? requestError.message : "Unable to issue this book.");
+    } finally {
+      setIsBorrowing(false);
+    }
+  }
+
+  async function handleReturn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    setReturnError(null);
+    setReturnInfo(null);
+    setIsReturning(true);
+    try {
+      const record = await returnBook(Number(formData.get("borrowId")));
+      const fineText =
+        record.fine && record.fine > 0 ? ` Fine ${record.fine}.` : "";
+      setReturnInfo(`Returned "${record.bookName ?? "book"}".${fineText}`);
+      form.reset();
+    } catch (requestError) {
+      setReturnError(requestError instanceof Error ? requestError.message : "Unable to record this return.");
+    } finally {
+      setIsReturning(false);
+    }
+  }
+
   return (
     <AdminLayout title="Borrow / Return" subtitle="Issue and receive books">
       <div className="grid gap-5 lg:grid-cols-2">
         <SectionCard title="Issue a book" description="Loans run for 7 days from the borrow date">
-          <div className="grid gap-4">
+          <form className="grid gap-4" onSubmit={handleBorrow}>
             <div className="grid gap-2">
               <Label htmlFor="borrow-member">Member ID</Label>
-              <Input id="borrow-member" placeholder="e.g. 1024" />
+              <Input id="borrow-member" name="userId" placeholder="e.g. 1024" required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="borrow-book">Book ID</Label>
-              <Input id="borrow-book" placeholder="e.g. 58" />
+              <Input id="borrow-book" name="bookId" placeholder="e.g. 58" required />
             </div>
-            <Button className="w-full">
-              <ArrowLeftRight className="h-4 w-4" /> Issue book
+            {borrowError ? <p className="text-sm text-destructive">{borrowError}</p> : null}
+            {borrowInfo ? <p className="text-sm text-muted-foreground">{borrowInfo}</p> : null}
+            <Button className="w-full" type="submit" disabled={isBorrowing}>
+              <ArrowLeftRight className="h-4 w-4" /> {isBorrowing ? "Issuing..." : "Issue book"}
             </Button>
-          </div>
+          </form>
         </SectionCard>
 
         <SectionCard title="Return a book" description="Late returns are fined per overdue day">
-          <div className="grid gap-4">
+          <form className="grid gap-4" onSubmit={handleReturn}>
             <div className="grid gap-2">
               <Label htmlFor="return-loan">Loan ID</Label>
-              <Input id="return-loan" placeholder="e.g. 341" />
+              <Input id="return-loan" name="borrowId" placeholder="e.g. 341" required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="return-date">Return date</Label>
-              <Input id="return-date" type="date" />
+              <Input id="return-date" type="date" disabled />
             </div>
-            <Button variant="outline" className="w-full">
-              <Repeat className="h-4 w-4" /> Record return
+            {returnError ? <p className="text-sm text-destructive">{returnError}</p> : null}
+            {returnInfo ? <p className="text-sm text-muted-foreground">{returnInfo}</p> : null}
+            <Button variant="outline" className="w-full" type="submit" disabled={isReturning}>
+              <Repeat className="h-4 w-4" /> {isReturning ? "Recording..." : "Record return"}
             </Button>
-          </div>
+          </form>
         </SectionCard>
       </div>
 

@@ -49,8 +49,8 @@ export function AdminLayout({
           subtitle={subtitle}
           navItems={adminNav}
           searchPlaceholder={searchPlaceholder}
-          userName={session.username}
-          userRole={session.role}
+          userName={session?.username}
+          userRole={session?.role}
           profileTo="/admin/profile"
           settingsTo="/admin/settings"
         />

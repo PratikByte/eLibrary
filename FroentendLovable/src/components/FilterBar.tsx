@@ -11,11 +11,13 @@ export function FilterBar({
   searchPlaceholder = "Search…",
   children,
   onClear,
+  onApply,
 }: {
   searchPlaceholder?: string | undefined;
   /** One <FilterField> per filter control. */
   children?: ReactNode | undefined;
   onClear?: (() => void) | undefined;
+  onApply?: (() => void) | undefined;
 }) {
   return (
     <section className="rounded-xl border border-border bg-card p-4 shadow-card">
@@ -32,7 +34,12 @@ export function FilterBar({
       {children ? (
         <>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{children}</div>
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex justify-end gap-2">
+            {onApply ? (
+              <Button size="sm" onClick={onApply}>
+                Apply filters
+              </Button>
+            ) : null}
             <Button variant="ghost" size="sm" className="text-primary" onClick={onClear}>
               Clear filters
             </Button>

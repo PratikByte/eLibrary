@@ -8,10 +8,12 @@ export type Book = {
   id: number;
   title: string;
   author: string;
-  price: number;
-  total: number;
+  /** Present on dummy data and the price-range API; omitted by other book endpoints. */
+  price?: number;
+  /** Dummy data only — the backend does not expose total copies. */
+  total?: number;
   available: number;
-  /** Optional cover image URL (local preview until the API is connected). */
+  /** Optional cover image URL from the API or a local preview. */
   cover?: string;
 };
 

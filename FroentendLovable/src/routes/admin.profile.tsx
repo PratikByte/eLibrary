@@ -1,8 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/AdminLayout";
 import { ProfileForm } from "@/components/ProfileForm";
-import { getAuthSession, type AuthSession } from "@/lib/api";
+import { apiRequest, getAuthSession } from "@/lib/api";
 import { useEffect, useState } from "react";
+
+type UserProfile = {
+  userId: number;
+  username: string;
+  email: string;
+  role: string;
+  profileImageUrl?: string | null;
+};
+
+type ApiResponse<T> = {
+  success: boolean;
+  message?: string | null;
+  data?: T | null;
+};
 
 export const Route = createFileRoute("/admin/profile")({
   head: () => ({
@@ -23,16 +37,51 @@ export const Route = createFileRoute("/admin/profile")({
 });
 
 function AdminProfilePage() {
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setSession(getAuthSession());
+    const session = getAuthSession();
+    if (!session) {
+      setError("Please sign in to view your profile.");
+      return;
+    }
+
+    let cancelled = false;
+    apiRequest<ApiResponse<UserProfile>>(`/api/UserProfile/${session.userId}`)
+      .then((response) => {
+        if (cancelled) return;
+        if (!response.success || !response.data) {
+          setError(response.message ?? "Unable to load your profile.");
+          return;
+        }
+        setProfile(response.data);
+      })
+      .catch((requestError) => {
+        if (!cancelled) {
+          setError(
+            requestError instanceof Error ? requestError.message : "Unable to load your profile.",
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
     <AdminLayout title="Profile" subtitle="Your librarian account">
-      {session ? (
-        <ProfileForm name={session.username} email={session.email} role={session.role} />
+      {error ? (
+        <p className="text-sm text-destructive">{error}</p>
+      ) : profile ? (
+        <ProfileForm
+          userId={profile.userId}
+          name={profile.username}
+          email={profile.email}
+          role={profile.role}
+          profileImageUrl={profile.profileImageUrl ?? null}
+        />
       ) : (
         <p className="text-sm text-muted-foreground">Loading your profile...</p>
       )}

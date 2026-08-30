@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthCard } from "@/components/AuthCard";
-import { apiRequest } from "@/lib/api";
+import { registerUser } from "@/lib/api";
 import { useState, type FormEvent } from "react";
 
 export const Route = createFileRoute("/register")({
@@ -32,14 +32,11 @@ function RegisterPage() {
 
     const formData = new FormData(event.currentTarget);
     try {
-      await apiRequest("/api/Auth/register", {
-        method: "POST",
-        body: {
-          Username: formData.get("username"),
-          Email: formData.get("email"),
-          Password: formData.get("password"),
-        },
-      });
+      await registerUser(
+        String(formData.get("username") ?? ""),
+        String(formData.get("email") ?? ""),
+        String(formData.get("password") ?? ""),
+      );
       window.location.assign("/login");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to register.");

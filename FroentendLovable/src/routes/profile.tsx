@@ -73,10 +73,11 @@ function ProfilePage() {
         <p className="text-sm text-destructive">{error}</p>
       ) : profile ? (
         <ProfileForm
+          userId={profile.userId}
           name={profile.username}
           email={profile.email}
           role={profile.role}
-          profileImageUrl={profile.profileImageUrl}
+          profileImageUrl={profile.profileImageUrl ?? null}
         />
       ) : (
         <p className="text-sm text-muted-foreground">Loading your profile...</p>

@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarNav, SidebarLogo, type NavItem } from "./Sidebar";
+import { clearAuthSession } from "@/lib/api";
 
 type HeaderProps = {
   title: string;
@@ -127,10 +128,14 @@ export function Header({
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild className="text-destructive focus:text-destructive">
-                <Link to="/login">
-                  <LogOut className="h-4 w-4" /> Logout
-                </Link>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => {
+                  clearAuthSession();
+                  window.location.assign("/login");
+                }}
+              >
+                <LogOut className="h-4 w-4" /> Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

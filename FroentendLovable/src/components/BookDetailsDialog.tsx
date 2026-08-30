@@ -20,9 +20,7 @@ export type BookDialogMode = "view" | "edit";
 /**
  * Book information card shown in a dialog.
  * - mode "view": read-only details
- * - mode "edit": same card with editable fields + Save / Cancel
- *
- * Saving is local only for now (visual placeholder) until the API is connected.
+ * - mode "edit": price and cover can be updated; other fields are read-only
  */
 export function BookDetailsDialog({
   book,
@@ -30,18 +28,22 @@ export function BookDetailsDialog({
   open,
   onOpenChange,
   onSave,
+  onRemoveCover,
 }: {
   book: Book | null;
   mode: BookDialogMode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave?: (book: Book) => void;
+  onSave?: (book: Book, coverFile?: File | null) => void;
+  onRemoveCover?: (book: Book) => void;
 }) {
   const [draft, setDraft] = useState<Book | null>(book);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreviewOpen, setCoverPreviewOpen] = useState(false);
 
   useEffect(() => {
     setDraft(book);
+    setCoverFile(null);
   }, [book, mode, open]);
 
   if (!book || !draft) return null;
@@ -101,7 +103,9 @@ export function BookDetailsDialog({
               <div className="mt-2">
                 {draft.available > 0 ? (
                   <Badge variant="secondary">
-                    {draft.available} of {draft.total} available
+                    {draft.total != null && draft.total !== draft.available
+                      ? `${draft.available} of ${draft.total} available`
+                      : `${draft.available} available`}
                   </Badge>
                 ) : (
                   <Badge variant="destructive">Out of stock</Badge>
@@ -114,46 +118,24 @@ export function BookDetailsDialog({
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2 sm:col-span-2">
                 <Label htmlFor="book-edit-title">Title</Label>
-                <Input
-                  id="book-edit-title"
-                  value={draft.title}
-                  onChange={(event) => update({ title: event.target.value })}
-                />
+                <Input id="book-edit-title" value={draft.title} disabled />
               </div>
               <div className="grid gap-2 sm:col-span-2">
                 <Label htmlFor="book-edit-author">Author</Label>
-                <Input
-                  id="book-edit-author"
-                  value={draft.author}
-                  onChange={(event) => update({ author: event.target.value })}
-                />
+                <Input id="book-edit-author" value={draft.author} disabled />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="book-edit-price">Price</Label>
                 <Input
                   id="book-edit-price"
                   type="number"
-                  value={draft.price}
+                  value={draft.price ?? ""}
                   onChange={(event) => update({ price: Number(event.target.value) })}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="book-edit-total">Total copies</Label>
-                <Input
-                  id="book-edit-total"
-                  type="number"
-                  value={draft.total}
-                  onChange={(event) => update({ total: Number(event.target.value) })}
-                />
-              </div>
-              <div className="grid gap-2">
                 <Label htmlFor="book-edit-available">Available copies</Label>
-                <Input
-                  id="book-edit-available"
-                  type="number"
-                  value={draft.available}
-                  onChange={(event) => update({ available: Number(event.target.value) })}
-                />
+                <Input id="book-edit-available" type="number" value={draft.available} disabled />
               </div>
             </div>
           ) : (
@@ -164,11 +146,7 @@ export function BookDetailsDialog({
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Price</dt>
-                <dd className="text-sm font-medium">{draft.price}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Total copies</dt>
-                <dd className="text-sm font-medium">{draft.total}</dd>
+                <dd className="text-sm font-medium">{draft.price ?? "—"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Available copies</dt>
@@ -184,9 +162,14 @@ export function BookDetailsDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
+              {draft.cover && onRemoveCover ? (
+                <Button variant="ghost" onClick={() => onRemoveCover(draft)}>
+                  Remove cover
+                </Button>
+              ) : null}
               <Button
                 onClick={() => {
-                  onSave?.(draft);
+                  onSave?.(draft, coverFile);
                   onOpenChange(false);
                 }}
               >
@@ -206,7 +189,10 @@ export function BookDetailsDialog({
           title={draft.title}
           imageUrl={draft.cover}
           allowChange={isEdit}
-          onImageSelected={(previewUrl) => update({ cover: previewUrl })}
+          onImageSelected={(previewUrl, file) => {
+            setCoverFile(file);
+            update({ cover: previewUrl });
+          }}
         />
       </DialogContent>
     </Dialog>
