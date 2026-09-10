@@ -12,5 +12,5 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$Ro
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$FrontendPath'; npm run dev"
 
 Write-Host "Backend started." -ForegroundColor Green
-Write-Host "Frontend started." -ForegroundColor Green
+Write-Host "Frontend started at http://localhost:3001." -ForegroundColor Green
 Write-Host "eLibrary started successfully!" -ForegroundColor Green

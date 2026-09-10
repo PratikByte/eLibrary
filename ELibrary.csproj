@@ -32,5 +32,23 @@
     <Folder Include="Migrations\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Services\**\*.cs" />
+    <Content Remove="Services\**\*" />
+    <None Remove="Services\**\*" />
+    <Compile Remove="eLibrary.Identity.API\**\*.cs" />
+    <Compile Remove="eLibrary.Identity.Application\**\*.cs" />
+    <Compile Remove="eLibrary.Identity.Domain\**\*.cs" />
+    <Compile Remove="eLibrary.Identity.Infrastructure\**\*.cs" />
+    <Content Remove="eLibrary.Identity.API\**\*" />
+    <Content Remove="eLibrary.Identity.Application\**\*" />
+    <Content Remove="eLibrary.Identity.Domain\**\*" />
+    <Content Remove="eLibrary.Identity.Infrastructure\**\*" />
+    <None Remove="eLibrary.Identity.API\**\*" />
+    <None Remove="eLibrary.Identity.Application\**\*" />
+    <None Remove="eLibrary.Identity.Domain\**\*" />
+    <None Remove="eLibrary.Identity.Infrastructure\**\*" />
+  </ItemGroup>
  
  </Project>

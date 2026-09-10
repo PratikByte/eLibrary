@@ -1,0 +1,95 @@
+{
+  "Routes": [
+    {
+      // Public authentication endpoints do not need a token.
+      "DownstreamPathTemplate": "/api/Auth/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "identity", "Port": 8001 }],
+      "UpstreamPathTemplate": "/api/Auth/{everything}",
+      "UpstreamHttpMethod": ["GET", "POST", "PUT", "DELETE"],
+      "Key": "identity-auth"
+    },
+    {
+      // Users and profiles require a valid JWT.
+      "DownstreamPathTemplate": "/api/User/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "identity", "Port": 8001 }],
+      "UpstreamPathTemplate": "/api/User/{everything}",
+      "UpstreamHttpMethod": ["GET", "POST", "PUT", "DELETE"],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      },
+      "Key": "identity-users"
+    },
+    {
+      "DownstreamPathTemplate": "/api/UserProfile/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "identity", "Port": 8001 }],
+      "UpstreamPathTemplate": "/api/UserProfile/{everything}",
+      "UpstreamHttpMethod": ["GET", "POST", "PUT", "DELETE"],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      },
+      "Key": "identity-profiles"
+    },
+    {
+      // Catalog is already extracted to the Book service.
+      "DownstreamPathTemplate": "/api/Book/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "book", "Port": 8002 }],
+      "UpstreamPathTemplate": "/api/Book/{everything}",
+      "UpstreamHttpMethod": ["GET", "POST", "PUT", "DELETE"],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      },
+      "Key": "book-catalog"
+    },
+    {
+      // Borrowing and reports remain on the monolith until Step 6.
+      "DownstreamPathTemplate": "/api/BorrowReturnBook/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "monolith", "Port": 8080 }],
+      "UpstreamPathTemplate": "/api/BorrowReturnBook/{everything}",
+      "UpstreamHttpMethod": ["GET", "POST", "PUT", "DELETE"],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      },
+      "Key": "monolith-borrow"
+    },
+    {
+      "DownstreamPathTemplate": "/api/Report/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "monolith", "Port": 8080 }],
+      "UpstreamPathTemplate": "/api/Report/{everything}",
+      "UpstreamHttpMethod": ["GET", "POST"],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      },
+      "Key": "monolith-reports"
+    },
+    {
+      "DownstreamPathTemplate": "/profile-images/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "identity", "Port": 8001 }],
+      "UpstreamPathTemplate": "/profile-images/{everything}",
+      "UpstreamHttpMethod": ["GET"],
+      "Key": "identity-files"
+    },
+    {
+      "DownstreamPathTemplate": "/book-covers/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "book", "Port": 8002 }],
+      "UpstreamPathTemplate": "/book-covers/{everything}",
+      "UpstreamHttpMethod": ["GET"],
+      "Key": "book-files"
+    }
+  ],
+  "GlobalConfiguration": {
+    "BaseUrl": "http://localhost:8000"
+  }
+}

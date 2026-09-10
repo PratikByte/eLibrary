@@ -1,0 +1,84 @@
+using eLibrary.Book.Application.DTOs;
+using eLibrary.Book.Application.Interfaces.Repositories;
+using eLibrary.Book.Application.Shared;
+using BookEntity = eLibrary.Book.Domain.Entities.Book;
+using MediatR;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+
+namespace eLibrary.Book.Application.Commands.Books;
+
+/// <summary>
+/// Command to create a new book.
+/// Keeps creation logic inside the Book Service.
+/// </summary>
+public class AddBookCommand : IRequest<ApiResponse<int>>
+{
+    public AddBookCommand(CreateBookDto bookDto)
+    {
+        BookDto = bookDto;
+    }
+
+    public CreateBookDto BookDto { get; }
+}
+
+public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse<int>>
+{
+    private readonly IBookRepository _bookRepository;
+    private readonly ILogger<AddBookCommandHandler> _logger;
+    private readonly string _coverFolder = Path.Combine("wwwroot", "book-covers");
+
+    public AddBookCommandHandler(IBookRepository bookRepository, ILogger<AddBookCommandHandler> logger)
+    {
+        _bookRepository = bookRepository;
+        _logger = logger;
+
+        if (!Directory.Exists(_coverFolder))
+            Directory.CreateDirectory(_coverFolder);
+    }
+
+    public async Task<ApiResponse<int>> Handle(AddBookCommand request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var isDuplicate = await _bookRepository.IsDuplicate(request.BookDto.Title, request.BookDto.Author);
+            if (isDuplicate)
+            {
+                return ApiResponse<int>.Fail("Duplicate book entry.", "A book with the same title and author already exists.");
+            }
+
+            string? coverImagePath = null;
+
+            if (request.BookDto.CoverImage is not null)
+            {
+                var fileName = Guid.NewGuid() + Path.GetExtension(request.BookDto.CoverImage.FileName);
+                var fullPath = Path.Combine(_coverFolder, fileName);
+
+                await using (var stream = new FileStream(fullPath, FileMode.Create))
+                {
+                    await request.BookDto.CoverImage.CopyToAsync(stream, cancellationToken);
+                }
+
+                coverImagePath = Path.Combine("book-covers", fileName).Replace('\\', '/');
+            }
+
+            var newBook = new BookEntity
+            {
+                Title = request.BookDto.Title,
+                Author = request.BookDto.Author,
+                Price = request.BookDto.Price,
+                PublishedYear = request.BookDto.PublishedYear,
+                AvailableCount = request.BookDto.AvailableCount,
+                CoverImagePath = coverImagePath
+            };
+
+            await _bookRepository.AddBookAsync(newBook);
+            return ApiResponse<int>.Ok(newBook.Id, "Book added successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while adding book: {Title} by {Author}", request.BookDto.Title, request.BookDto.Author);
+            return ApiResponse<int>.Fail("An error occurred while adding the book.", ex.Message);
+        }
+    }
+}
