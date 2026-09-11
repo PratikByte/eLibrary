@@ -5,6 +5,6 @@ namespace eLibrary.Identity.Application.Interfaces.Services;
 public interface ITokenService
 {
     string GenerateToken(User user);
-    string GeneratePasswordResetToken(int userId);
+    string GeneratePasswordResetToken(Guid userId);
     string? ValidatePasswordResetToken(string token);
 }

@@ -52,11 +52,11 @@ public class BorrowReturnBookController : ControllerBase
         return BadRequest(result);
     }
 
-    private int? GetEffectiveUserId(int requestedUserId) =>
+    private Guid? GetEffectiveUserId(Guid requestedUserId) =>
         User.IsInRole("Admin") ? requestedUserId : GetCurrentUserId();
 
-    private int? GetCurrentUserId() =>
-        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) ? userId : null;
+    private Guid? GetCurrentUserId() =>
+        Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) ? userId : null;
 
     private string GetUserName() => User.Identity?.Name ?? User.FindFirstValue(ClaimTypes.Name) ?? "User";
 }

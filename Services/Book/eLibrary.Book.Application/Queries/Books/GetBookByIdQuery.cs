@@ -11,12 +11,12 @@ namespace eLibrary.Book.Application.Queries.Books;
 /// </summary>
 public class GetBookByIdQuery : IRequest<ApiResponse<BookDto>>
 {
-    public GetBookByIdQuery(int id)
+    public GetBookByIdQuery(Guid id)
     {
         Id = id;
     }
 
-    public int Id { get; }
+    public Guid Id { get; }
 }
 
 public class GetBookByIdQueryHandler : IRequestHandler<GetBookByIdQuery, ApiResponse<BookDto>>

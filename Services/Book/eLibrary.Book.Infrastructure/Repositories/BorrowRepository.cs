@@ -19,7 +19,7 @@ public class BorrowRepository : IBorrowRepository
         await _context.BorrowRecords.AddAsync(borrowRecord, cancellationToken);
     }
 
-    public Task<BorrowRecordEntity?> GetByIdAsync(int id, CancellationToken cancellationToken) =>
+    public Task<BorrowRecordEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         _context.BorrowRecords.FirstOrDefaultAsync(record => record.Id == id, cancellationToken);
 
     public Task<List<BorrowRecordEntity>> GetOverdueAsync(CancellationToken cancellationToken) =>

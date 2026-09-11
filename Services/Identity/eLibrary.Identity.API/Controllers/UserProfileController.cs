@@ -18,7 +18,7 @@ public class UserProfileController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(Guid id)
     {
         if (!CanAccessUser(id)) return Forbid();
 
@@ -36,7 +36,7 @@ public class UserProfileController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromForm] UpdateProfileRequest request)
+    public async Task<IActionResult> Update(Guid id, [FromForm] UpdateProfileRequest request)
     {
         if (!CanAccessUser(id)) return Forbid();
 
@@ -81,12 +81,12 @@ public class UserProfileController : ControllerBase
         });
     }
 
-    private bool CanAccessUser(int userId)
+    private bool CanAccessUser(Guid userId)
     {
         if (User.IsInRole("Admin")) return true;
 
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return int.TryParse(currentUserId, out var parsed) && parsed == userId;
+        return Guid.TryParse(currentUserId, out var parsed) && parsed == userId;
     }
 }
 

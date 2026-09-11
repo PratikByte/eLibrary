@@ -31,7 +31,7 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null) return NotFound();
@@ -73,7 +73,7 @@ public class UserController : ControllerBase
 
     [Authorize(Roles = "Admin")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] int id)
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
         var deleted = await _userRepository.DeleteByIdAsync(id);
         return deleted

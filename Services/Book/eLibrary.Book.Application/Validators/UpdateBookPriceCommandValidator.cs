@@ -8,7 +8,7 @@ public sealed class UpdateBookPriceCommandValidator : AbstractValidator<UpdateBo
     public UpdateBookPriceCommandValidator()
     {
         RuleFor(command => command.BookId)
-            .GreaterThan(0);
+            .NotEmpty();
 
         RuleFor(command => command.NewPrice)
             .GreaterThan(0)

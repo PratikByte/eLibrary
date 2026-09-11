@@ -14,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // API basics
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<eLibrary.Book.Application.Commands.Books.AddBookCommand>();
 builder.Services.AddEndpointsApiExplorer();

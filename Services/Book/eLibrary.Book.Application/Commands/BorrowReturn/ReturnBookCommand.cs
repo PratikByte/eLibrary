@@ -5,7 +5,7 @@ using MediatR;
 
 namespace eLibrary.Book.Application.Commands.BorrowReturn;
 
-public record ReturnBookCommand(int BorrowId, int? CurrentUserId = null, bool IsAdmin = false, string? UserName = null)
+public record ReturnBookCommand(Guid BorrowId, Guid? CurrentUserId = null, bool IsAdmin = false, string? UserName = null)
     : IRequest<ApiResponse<BorrowRecordDto>>;
 
 public class ReturnBookCommandHandler : IRequestHandler<ReturnBookCommand, ApiResponse<BorrowRecordDto>>

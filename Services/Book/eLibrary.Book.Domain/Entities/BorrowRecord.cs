@@ -2,13 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace eLibrary.Book.Domain.Entities;
 
-public class BorrowRecord
+public class BorrowRecord : BaseEntity
 {
-    [Key]
-    public int Id { get; set; }
-    public int UserId { get; set; }
+    public Guid UserId { get; set; }
     public string UserName { get; set; } = string.Empty;
-    public int BookId { get; set; }
+    public Guid BookId { get; set; }
     public string BookName { get; set; } = string.Empty;
     public DateTime BorrowDate { get; set; } = DateTime.UtcNow;
     public DateTime DueDate { get; set; }

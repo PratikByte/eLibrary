@@ -11,12 +11,12 @@ namespace eLibrary.Book.Application.Commands.Books;
 /// </summary>
 public class DeleteBookCoverCommand : IRequest<ApiResponse<bool>>
 {
-    public DeleteBookCoverCommand(int bookId)
+    public DeleteBookCoverCommand(Guid bookId)
     {
         BookId = bookId;
     }
 
-    public int BookId { get; }
+    public Guid BookId { get; }
 }
 
 public class DeleteBookCoverCommandHandler : IRequestHandler<DeleteBookCoverCommand, ApiResponse<bool>>

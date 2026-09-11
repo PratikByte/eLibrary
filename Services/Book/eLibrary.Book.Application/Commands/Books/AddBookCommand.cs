@@ -13,7 +13,7 @@ namespace eLibrary.Book.Application.Commands.Books;
 /// Command to create a new book.
 /// Keeps creation logic inside the Book Service.
 /// </summary>
-public class AddBookCommand : IRequest<ApiResponse<int>>
+public class AddBookCommand : IRequest<ApiResponse<Guid>>
 {
     public AddBookCommand(CreateBookDto bookDto)
     {
@@ -23,7 +23,7 @@ public class AddBookCommand : IRequest<ApiResponse<int>>
     public CreateBookDto BookDto { get; }
 }
 
-public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse<int>>
+public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse<Guid>>
 {
     private const long MaxCoverSize = 5 * 1024 * 1024;
     private static readonly HashSet<string> AllowedCoverExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -45,14 +45,14 @@ public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse
             Directory.CreateDirectory(_coverFolder);
     }
 
-    public async Task<ApiResponse<int>> Handle(AddBookCommand request, CancellationToken cancellationToken)
+    public async Task<ApiResponse<Guid>> Handle(AddBookCommand request, CancellationToken cancellationToken)
     {
         try
         {
             var isDuplicate = await _bookRepository.IsDuplicate(request.BookDto.Title, request.BookDto.Author);
             if (isDuplicate)
             {
-                return ApiResponse<int>.Fail("Duplicate book entry.", "A book with the same title and author already exists.");
+                return ApiResponse<Guid>.Fail("Duplicate book entry.", "A book with the same title and author already exists.");
             }
 
             string? coverImagePath = null;
@@ -64,7 +64,7 @@ public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse
                     request.BookDto.CoverImage.Length > MaxCoverSize ||
                     !AllowedCoverExtensions.Contains(extension))
                 {
-                    return ApiResponse<int>.Fail("Cover image must be a non-empty JPG, PNG, or WebP file no larger than 5 MB.");
+                    return ApiResponse<Guid>.Fail("Cover image must be a non-empty JPG, PNG, or WebP file no larger than 5 MB.");
                 }
 
                 var fileName = Guid.NewGuid() + extension.ToLowerInvariant();
@@ -89,12 +89,12 @@ public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse
             };
 
             await _bookRepository.AddBookAsync(newBook);
-            return ApiResponse<int>.Ok(newBook.Id, "Book added successfully.");
+            return ApiResponse<Guid>.Ok(newBook.Id, "Book added successfully.");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while adding book: {Title} by {Author}", request.BookDto.Title, request.BookDto.Author);
-            return ApiResponse<int>.Fail("An error occurred while adding the book.", ex.Message);
+            return ApiResponse<Guid>.Fail("An error occurred while adding the book.", ex.Message);
         }
     }
 }

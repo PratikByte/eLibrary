@@ -20,7 +20,7 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByEmailAsync(string email)
         => await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
-    public async Task<User?> GetByIdAsync(int id)
+    public async Task<User?> GetByIdAsync(Guid id)
         => await _context.Users.FirstOrDefaultAsync(u => u.UserId == id);
 
     public async Task<(IReadOnlyList<User> Users, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize)
@@ -31,19 +31,19 @@ public class UserRepository : IUserRepository
         return (users, totalCount);
     }
 
-    public async Task<bool> DeleteByIdAsync(int id)
+    public async Task<bool> DeleteByIdAsync(Guid id)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == id);
         if (user is null) return false;
-        _context.Users.Remove(user);
+        user.IsDeleted = true;
         await _context.SaveChangesAsync();
         return true;
     }
 
-    public async Task<bool> IsEmailDuplicateAsync(string email, int? excludeUserId = null)
+    public async Task<bool> IsEmailDuplicateAsync(string email, Guid? excludeUserId = null)
         => await _context.Users.AnyAsync(u => u.Email == email && (!excludeUserId.HasValue || u.UserId != excludeUserId.Value));
 
-    public async Task<bool> IsUsernameDuplicateAsync(string username, int? excludeUserId = null)
+    public async Task<bool> IsUsernameDuplicateAsync(string username, Guid? excludeUserId = null)
         => await _context.Users.AnyAsync(u => u.Username == username && (!excludeUserId.HasValue || u.UserId != excludeUserId.Value));
 
     public async Task AddAsync(User user)

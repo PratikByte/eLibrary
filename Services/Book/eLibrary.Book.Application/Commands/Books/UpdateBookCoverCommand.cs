@@ -12,13 +12,13 @@ namespace eLibrary.Book.Application.Commands.Books;
 /// </summary>
 public class UpdateBookCoverCommand : IRequest<ApiResponse<bool>>
 {
-    public UpdateBookCoverCommand(int bookId, IFormFile coverImage)
+    public UpdateBookCoverCommand(Guid bookId, IFormFile coverImage)
     {
         BookId = bookId;
         CoverImage = coverImage;
     }
 
-    public int BookId { get; }
+    public Guid BookId { get; }
     public IFormFile CoverImage { get; }
 }
 

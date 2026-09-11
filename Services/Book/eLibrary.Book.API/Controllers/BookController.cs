@@ -40,8 +40,8 @@ public class BookController : ControllerBase
     /// Get a single book by id.
     /// </summary>
     [Authorize(Roles = "User,Admin")]
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetBookById(int id)
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetBookById(Guid id)
     {
         var result = await _mediator.Send(new GetBookByIdQuery(id));
         return Ok(result);
@@ -96,7 +96,7 @@ public class BookController : ControllerBase
     /// </summary>
     [Authorize(Roles = "Admin")]
     [HttpPut("{id}/cover")]
-    public async Task<IActionResult> UpdateBookCover(int id, IFormFile? coverImage)
+    public async Task<IActionResult> UpdateBookCover(Guid id, IFormFile? coverImage)
     {
         if (coverImage is null)
         {
@@ -112,7 +112,7 @@ public class BookController : ControllerBase
     /// </summary>
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id}/cover")]
-    public async Task<IActionResult> DeleteBookCover(int id)
+    public async Task<IActionResult> DeleteBookCover(Guid id)
     {
         var result = await _mediator.Send(new DeleteBookCoverCommand(id));
         return result.Success ? Ok(result) : NotFound(result);
@@ -123,7 +123,7 @@ public class BookController : ControllerBase
     /// </summary>
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteBook(int id)
+    public async Task<IActionResult> DeleteBook(Guid id)
     {
         var result = await _mediator.Send(new DeleteBookCommand(id));
         return result.Success ? Ok(result) : NotFound(result);

@@ -8,12 +8,8 @@ namespace eLibrary.Book.Domain.Entities;
 /// This model is intentionally focused only on book data and stock information.
 /// </summary>
 [Table("Books")]
-public class Book
+public class Book : BaseEntity
 {
-    [Key]
-    [Column("BookId")]
-    public int Id { get; set; }
-
     public string? Title { get; set; }
     public string? Author { get; set; }
     public float Price { get; set; }

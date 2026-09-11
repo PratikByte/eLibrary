@@ -6,7 +6,7 @@ using MediatR;
 
 namespace eLibrary.Book.Application.Commands.BorrowReturn;
 
-public record BorrowBookCommand(int UserId, int BookId, string? UserName = null) : IRequest<ApiResponse<BorrowRecordDto>>;
+public record BorrowBookCommand(Guid UserId, Guid BookId, string? UserName = null) : IRequest<ApiResponse<BorrowRecordDto>>;
 
 public class BorrowBookCommandHandler : IRequestHandler<BorrowBookCommand, ApiResponse<BorrowRecordDto>>
 {

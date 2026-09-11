@@ -46,7 +46,7 @@ public class TokenService : ITokenService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public string GeneratePasswordResetToken(int userId)
+    public string GeneratePasswordResetToken(Guid userId)
     {
         var issuer = _configuration["JwtSettings:Issuer"] ?? "eLibrary";
         var audience = _configuration["JwtSettings:Audience"] ?? "eLibraryUsers";

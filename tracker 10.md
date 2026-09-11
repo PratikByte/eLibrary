@@ -1,7 +1,7 @@
 # eLibrary Microservice Migration Tracker
 
 **Last updated:** 11 September 2026  
-**Current step:** Step 8 - Standardize entity IDs and audit trails
+**Current step:** Step 9 - Database architecture: PostgreSQL + MongoDB
 **Rule:** Complete each step in order. Keep the monolith available until final production cutover.
 
 | Step | Phase | Status | Depends on |
@@ -13,8 +13,8 @@
 | 5 | Route Book catalog through Gateway | Complete | Step 4 |
 | 6 | Move borrowing, returning, and reports into Book | Complete | Step 5 |
 | 7 | Switch frontend to Gateway | Complete | Step 6 |
-| 8 | Standardize entity IDs and audit trails | In progress | Step 7 |
-| 9 | Correct database architecture: PostgreSQL + MongoDB | Pending | Step 8 |
+| 8 | Standardize entity IDs and audit trails | Complete | Step 7 |
+| 9 | Correct database architecture: PostgreSQL + MongoDB | In progress | Step 8 |
 | 10 | Initialize fresh databases and seed test data | Pending | Step 9 |
 | 11 | Correct backend persistence and file storage | Pending | Step 10 |
 | 12 | Correct frontend API and media integration | Pending | Step 11 |
@@ -31,7 +31,7 @@
 - [x] Step 5 - Book Gateway routing
 - [x] Step 6 - Borrowing and reports
 - [x] Step 7 - Frontend Gateway cutover
-- [ ] Step 8 - Entity UUIDs and audit trails (next)
+- [x] Step 8 - Entity UUIDs, audit fields, and soft delete
 - [ ] Step 9 - Database architecture: PostgreSQL + MongoDB
 - [ ] Step 10 - Fresh database initialization and test seed
 - [ ] Step 11 - Backend persistence and file storage correction
@@ -56,6 +56,14 @@
 Update the status and checklist after each verified step.
 
 ## Step 5 Verification Summary
+
+## Step 8 Verification Summary
+
+- Identity and Book persistent entities now inherit a service-owned `BaseEntity` with application-generated `Guid` IDs, UTC creation/update fields, audit actors, and soft-delete fields.
+- `IdentityDbContext` and `BookDbContext` centrally populate audit fields from the JWT subject and apply global filters to hide soft-deleted rows.
+- Book and Identity delete operations now perform soft deletes; the API contracts and service relationships use UUID values rather than integer database IDs.
+- No concurrency-control fields, domain events, or external audit-trail DLL were added.
+- `dotnet build` passed for both `eLibrary.Book.API` and `eLibrary.Identity.API` with zero warnings and zero errors on 11 September 2026.
 
 - Book catalog API is forwarded by Ocelot from `/api/Book/*` to `http://localhost:8002/api/Book/*`.
 - Book catalog routes require the JWT bearer token: unauthenticated `GET /api/Book/paged` returns `401`.

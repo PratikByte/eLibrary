@@ -27,12 +27,12 @@ public class BookRepository : IBookRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<bool> DeleteBookByIdAsync(int id, CancellationToken cancellationToken)
+    public async Task<bool> DeleteBookByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         var book = await _context.Books.FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (book == null) return false;
 
-        _context.Books.Remove(book);
+        book.IsDeleted = true;
         await _context.SaveChangesAsync(cancellationToken);
         return true;
     }
@@ -77,7 +77,7 @@ public class BookRepository : IBookRepository
         return (books, totalRecords);
     }
 
-    public async Task<bookEntity?> GetBookByIdAsync(int id, CancellationToken cancellationToken)
+    public async Task<bookEntity?> GetBookByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         return await _context.Books.FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
     }
@@ -112,7 +112,7 @@ public class BookRepository : IBookRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateAvailableCountAsync(int bookId, int newAvailableCount, CancellationToken cancellationToken)
+    public async Task UpdateAvailableCountAsync(Guid bookId, int newAvailableCount, CancellationToken cancellationToken)
     {
         var book = await _context.Books.FirstOrDefaultAsync(b => b.Id == bookId, cancellationToken);
         if (book == null)
@@ -123,7 +123,7 @@ public class BookRepository : IBookRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<bool> IncreaseAvailBookCountAsync(int bookId, CancellationToken cancellationToken)
+    public async Task<bool> IncreaseAvailBookCountAsync(Guid bookId, CancellationToken cancellationToken)
     {
         var book = await _context.Books.FirstOrDefaultAsync(b => b.Id == bookId, cancellationToken);
         if (book == null) return false;
@@ -133,7 +133,7 @@ public class BookRepository : IBookRepository
         return true;
     }
 
-    public async Task<bool> DecreaseAvailBookCountAsync(int bookId, CancellationToken cancellationToken)
+    public async Task<bool> DecreaseAvailBookCountAsync(Guid bookId, CancellationToken cancellationToken)
     {
         var book = await _context.Books.FirstOrDefaultAsync(b => b.Id == bookId, cancellationToken);
         if (book == null) return false;

@@ -10,7 +10,7 @@ namespace eLibrary.Book.Application.Commands.Books;
 public sealed class UpdateBookPriceCommand : IRequest<ApiResponse<BookDto>>
 {
     [Range(1, int.MaxValue)]
-    public int BookId { get; set; }
+    public Guid BookId { get; set; }
 
     [Range(0.01, 1000000)]
     public float NewPrice { get; set; }
