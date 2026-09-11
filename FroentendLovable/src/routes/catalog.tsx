@@ -73,7 +73,7 @@ function CatalogPage() {
 
         if (trimmedAuthor) {
           const response = await getBooksByAuthor(trimmedAuthor, pageNumber, DEFAULT_PAGE_SIZE);
-          setBooks((response.data ?? []).map(mapBookDto));
+          setBooks(response.items.map(mapBookDto));
           setPage(response.pageNumber || pageNumber);
           setTotalPages(response.totalPages || 1);
         } else if (hasPriceRange) {
@@ -83,7 +83,7 @@ function CatalogPage() {
           setTotalPages(1);
         } else {
           const response = await getBooksPaged(pageNumber, DEFAULT_PAGE_SIZE);
-          setBooks((response.data ?? []).map(mapBookDto));
+          setBooks(response.items.map(mapBookDto));
           setPage(response.pageNumber || pageNumber);
           setTotalPages(response.totalPages || 1);
         }

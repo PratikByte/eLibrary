@@ -4,6 +4,7 @@ using eLibrary.Book.Application.Shared;
 using BookEntity = eLibrary.Book.Domain.Entities.Book;
 using MediatR;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace eLibrary.Book.Application.Commands.Books;
@@ -24,14 +25,21 @@ public class AddBookCommand : IRequest<ApiResponse<int>>
 
 public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse<int>>
 {
+    private const long MaxCoverSize = 5 * 1024 * 1024;
+    private static readonly HashSet<string> AllowedCoverExtensions = new(StringComparer.OrdinalIgnoreCase)
+        { ".jpg", ".jpeg", ".png", ".webp" };
     private readonly IBookRepository _bookRepository;
     private readonly ILogger<AddBookCommandHandler> _logger;
     private readonly string _coverFolder = Path.Combine("wwwroot", "book-covers");
 
-    public AddBookCommandHandler(IBookRepository bookRepository, ILogger<AddBookCommandHandler> logger)
+    public AddBookCommandHandler(
+        IBookRepository bookRepository,
+        ILogger<AddBookCommandHandler> logger,
+        IWebHostEnvironment environment)
     {
         _bookRepository = bookRepository;
         _logger = logger;
+        _coverFolder = Path.Combine(environment.ContentRootPath, "wwwroot", "book-covers");
 
         if (!Directory.Exists(_coverFolder))
             Directory.CreateDirectory(_coverFolder);
@@ -51,7 +59,15 @@ public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse
 
             if (request.BookDto.CoverImage is not null)
             {
-                var fileName = Guid.NewGuid() + Path.GetExtension(request.BookDto.CoverImage.FileName);
+                var extension = Path.GetExtension(request.BookDto.CoverImage.FileName);
+                if (request.BookDto.CoverImage.Length == 0 ||
+                    request.BookDto.CoverImage.Length > MaxCoverSize ||
+                    !AllowedCoverExtensions.Contains(extension))
+                {
+                    return ApiResponse<int>.Fail("Cover image must be a non-empty JPG, PNG, or WebP file no larger than 5 MB.");
+                }
+
+                var fileName = Guid.NewGuid() + extension.ToLowerInvariant();
                 var fullPath = Path.Combine(_coverFolder, fileName);
 
                 await using (var stream = new FileStream(fullPath, FileMode.Create))

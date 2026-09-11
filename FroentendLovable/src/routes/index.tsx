@@ -39,7 +39,7 @@ function UserDashboardPage() {
     let cancelled = false;
     getBooksPaged(1, 3)
       .then((response) => {
-        if (!cancelled) setRecentBooks((response.data ?? []).map(mapBookDto));
+        if (!cancelled) setRecentBooks(response.items.map(mapBookDto));
       })
       .catch(() => {
         if (!cancelled) setRecentBooks([]);

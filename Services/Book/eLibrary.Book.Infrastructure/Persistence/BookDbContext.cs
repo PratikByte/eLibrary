@@ -1,4 +1,5 @@
 using BookEntity = eLibrary.Book.Domain.Entities.Book;
+using BorrowRecordEntity = eLibrary.Book.Domain.Entities.BorrowRecord;
 using Microsoft.EntityFrameworkCore;
 
 namespace eLibrary.Book.Infrastructure.Persistence;
@@ -14,6 +15,7 @@ public class BookDbContext : DbContext
     }
 
     public DbSet<BookEntity> Books => Set<BookEntity>();
+    public DbSet<BorrowRecordEntity> BorrowRecords => Set<BorrowRecordEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,6 +28,15 @@ public class BookDbContext : DbContext
             entity.Property(x => x.Author).IsRequired(false);
             entity.Property(x => x.Price).IsRequired();
             entity.Property(x => x.AvailableCount).IsRequired();
+        });
+
+        modelBuilder.Entity<BorrowRecordEntity>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Ignore(x => x.UserName);
+            entity.Ignore(x => x.BookName);
+            entity.Property(x => x.Fine).HasPrecision(10, 2);
+            entity.HasIndex(x => new { x.UserId, x.BookId, x.IsReturned });
         });
     }
 }

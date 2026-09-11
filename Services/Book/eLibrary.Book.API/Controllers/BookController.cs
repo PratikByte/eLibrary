@@ -77,7 +77,18 @@ public class BookController : ControllerBase
     public async Task<IActionResult> AddBook([FromForm] CreateBookDto bookDto)
     {
         var result = await _mediator.Send(new AddBookCommand(bookDto));
-        return Ok(result);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    /// <summary>
+    /// Update the price of an existing book.
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpPut("update-price")]
+    public async Task<IActionResult> UpdateBookPrice([FromBody] UpdateBookPriceCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return result.Success ? Ok(result) : BadRequest(result);
     }
 
     /// <summary>
@@ -85,10 +96,15 @@ public class BookController : ControllerBase
     /// </summary>
     [Authorize(Roles = "Admin")]
     [HttpPut("{id}/cover")]
-    public async Task<IActionResult> UpdateBookCover(int id, IFormFile coverImage)
+    public async Task<IActionResult> UpdateBookCover(int id, IFormFile? coverImage)
     {
+        if (coverImage is null)
+        {
+            return BadRequest(ApiResponse<bool>.Fail("A cover image is required."));
+        }
+
         var result = await _mediator.Send(new UpdateBookCoverCommand(id, coverImage));
-        return Ok(result);
+        return result.Success ? Ok(result) : BadRequest(result);
     }
 
     /// <summary>
@@ -99,7 +115,7 @@ public class BookController : ControllerBase
     public async Task<IActionResult> DeleteBookCover(int id)
     {
         var result = await _mediator.Send(new DeleteBookCoverCommand(id));
-        return Ok(result);
+        return result.Success ? Ok(result) : NotFound(result);
     }
 
     /// <summary>
@@ -110,6 +126,6 @@ public class BookController : ControllerBase
     public async Task<IActionResult> DeleteBook(int id)
     {
         var result = await _mediator.Send(new DeleteBookCommand(id));
-        return Ok(result);
+        return result.Success ? Ok(result) : NotFound(result);
     }
 }

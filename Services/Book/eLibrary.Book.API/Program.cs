@@ -3,6 +3,8 @@ using eLibrary.Book.Application.Commands.Books;
 using eLibrary.Book.Application.Interfaces.Repositories;
 using eLibrary.Book.Infrastructure.Persistence;
 using eLibrary.Book.Infrastructure.Repositories;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // API basics
 builder.Services.AddControllers();
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<eLibrary.Book.Application.Commands.Books.AddBookCommand>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -21,6 +25,7 @@ builder.Services.AddDbContext<BookDbContext>(options =>
 
 // Book service dependencies
 builder.Services.AddScoped<IBookRepository, BookRepository>();
+builder.Services.AddScoped<IBorrowRepository, BorrowRepository>();
 
 // MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(AddBookCommand).Assembly));
@@ -56,6 +61,9 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+var coverFolder = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), "book-covers");
+Directory.CreateDirectory(coverFolder);
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -66,6 +74,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

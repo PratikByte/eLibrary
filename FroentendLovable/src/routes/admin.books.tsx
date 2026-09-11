@@ -96,10 +96,10 @@ function AdminBooksPage() {
 
         if (trimmedAuthor) {
           const response = await getBooksByAuthor(trimmedAuthor, pageNumber, DEFAULT_PAGE_SIZE);
-          setBooks((response.data ?? []).map(mapBookDto));
+          setBooks(response.items.map(mapBookDto));
           setPage(response.pageNumber || pageNumber);
           setTotalPages(response.totalPages || 1);
-          setTotalRecords(response.totalRecords || (response.data ?? []).length);
+          setTotalRecords(response.totalRecords || response.items.length);
         } else if (hasPriceRange) {
           const data = await getBooksByPriceRange(min, max);
           setBooks(data.map(mapBookDto));
@@ -108,10 +108,10 @@ function AdminBooksPage() {
           setTotalRecords(data.length);
         } else {
           const response = await getBooksPaged(pageNumber, DEFAULT_PAGE_SIZE);
-          setBooks((response.data ?? []).map(mapBookDto));
+          setBooks(response.items.map(mapBookDto));
           setPage(response.pageNumber || pageNumber);
           setTotalPages(response.totalPages || 1);
-          setTotalRecords(response.totalRecords || (response.data ?? []).length);
+          setTotalRecords(response.totalRecords || response.items.length);
         }
       } catch (requestError) {
         setError(requestError instanceof Error ? requestError.message : "Unable to load books.");

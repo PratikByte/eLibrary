@@ -32,12 +32,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.FallbackPolicy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .Build();
-});
+// Ocelot routes opt into JWT protection individually. This keeps public auth and
+// static-file routes reachable while catalog and user routes remain protected.
+builder.Services.AddAuthorization();
 
 builder.Services.AddCors(options =>
 {

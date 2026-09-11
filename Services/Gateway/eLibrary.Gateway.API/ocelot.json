@@ -11,6 +11,19 @@
     },
     {
       // Users and profiles require a valid JWT.
+      "DownstreamPathTemplate": "/api/User",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 8001 }],
+      "UpstreamPathTemplate": "/api/User",
+      "UpstreamHttpMethod": ["GET", "POST", "PUT", "DELETE"],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      },
+      "Key": "identity-users-root"
+    },
+    {
+      // Users and profiles require a valid JWT.
       "DownstreamPathTemplate": "/api/User/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 8001 }],
@@ -35,7 +48,7 @@
       "Key": "identity-profiles"
     },
     {
-      // Catalog is already extracted to the Book service.
+      // Catalog routes are protected and forwarded to the Book service on port 8002.
       "DownstreamPathTemplate": "/api/Book/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 8002 }],
@@ -48,29 +61,29 @@
       "Key": "book-catalog"
     },
     {
-      // Borrowing and reports remain on the monolith until Step 6.
+      // Borrowing is owned by the Book service and uses the existing EBook database.
       "DownstreamPathTemplate": "/api/BorrowReturnBook/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 5285 }],
+      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 8002 }],
       "UpstreamPathTemplate": "/api/BorrowReturnBook/{everything}",
       "UpstreamHttpMethod": ["GET", "POST", "PUT", "DELETE"],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
         "AllowedScopes": []
       },
-      "Key": "monolith-borrow"
+      "Key": "book-borrow"
     },
     {
       "DownstreamPathTemplate": "/api/Report/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 5285 }],
+      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 8002 }],
       "UpstreamPathTemplate": "/api/Report/{everything}",
       "UpstreamHttpMethod": ["GET", "POST"],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
         "AllowedScopes": []
       },
-      "Key": "monolith-reports"
+      "Key": "book-reports"
     },
     {
       "DownstreamPathTemplate": "/profile-images/{everything}",

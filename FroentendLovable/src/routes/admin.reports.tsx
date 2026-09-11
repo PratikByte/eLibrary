@@ -39,10 +39,10 @@ function AdminReportsPage() {
 
   async function loadAvailable(pageNumber = 1) {
     const response = await getAvailableBooksReport(pageNumber, DEFAULT_PAGE_SIZE);
-    setAvailable((response.data ?? []).map(mapBookDto));
+    setAvailable(response.items.map(mapBookDto));
     setAvailablePage(response.pageNumber || pageNumber);
     setAvailableTotalPages(response.totalPages || 1);
-    setAvailableTotal(response.totalRecords || (response.data ?? []).length);
+    setAvailableTotal(response.totalRecords || response.items.length);
   }
 
   useEffect(() => {

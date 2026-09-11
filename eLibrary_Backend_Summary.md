@@ -6,7 +6,7 @@
 - **Technology:** ASP.NET Core Web API on .NET 8, C#, MediatR/CQRS, FluentValidation, Swagger.
 - **Architecture:** Controllers -> MediatR commands/queries -> repositories/services -> Entity Framework Core.
 - **Database:** SQL Server via EF Core (`EBook` database; local `DefaultConnection`).
-- **External services:** Gmail SMTP sends password-reset, borrow-confirmation, and return-confirmation emails. CORS is configured for local frontend ports 5173, 3000, and 8080.
+- **External services:** Gmail SMTP sends password-reset, borrow-confirmation, and return-confirmation emails. CORS is configured for local frontend port 3001 and legacy ports 5173, 3000, and 8080.
 
 ## 2. Modules
 

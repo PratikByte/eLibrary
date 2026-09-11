@@ -43,6 +43,7 @@ public class GetBookByIdQueryHandler : IRequestHandler<GetBookByIdQuery, ApiResp
                 Id = book.Id,
                 Title = book.Title ?? string.Empty,
                 Author = book.Author ?? string.Empty,
+                Price = book.Price,
                 AvailableCount = book.AvailableCount,
                 CoverImageUrl = book.CoverImagePath == null ? null : "/" + book.CoverImagePath.Replace('\\', '/')
             };

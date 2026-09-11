@@ -20,7 +20,18 @@ export type ApiResponse<T> = {
   errors?: string[] | null;
 };
 
-export type PagedResponse<T> = ApiResponse<T[]> & {
+export type PagedResponse<T> = {
+  items: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalRecords: number;
+  totalPages: number;
+  success: boolean;
+  message?: string | null;
+  errors?: string[] | null;
+};
+
+export type DataPagedResponse<T> = ApiResponse<T[]> & {
   pageNumber: number;
   pageSize: number;
   totalRecords: number;
@@ -351,7 +362,7 @@ export async function returnBook(borrowId: number) {
 }
 
 export async function getUsersPaged(pageNumber = 1, pageSize = DEFAULT_PAGE_SIZE) {
-  return apiRequest<PagedResponse<UserDto>>(`/api/User?pageNumber=${pageNumber}&pageSize=${pageSize}`);
+  return apiRequest<DataPagedResponse<UserDto>>(`/api/User?pageNumber=${pageNumber}&pageSize=${pageSize}`);
 }
 
 export async function getUserById(userId: number) {

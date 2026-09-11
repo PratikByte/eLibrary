@@ -42,6 +42,7 @@ public class GetBooksByPriceRangeQueryHandler : IRequestHandler<GetBooksByPriceR
                 Id = x.Id,
                 Title = x.Title ?? string.Empty,
                 Author = x.Author ?? string.Empty,
+                Price = x.Price,
                 AvailableCount = x.AvailableCount,
                 CoverImageUrl = x.CoverImagePath == null ? null : "/" + x.CoverImagePath.Replace('\\', '/')
             }).ToList();
