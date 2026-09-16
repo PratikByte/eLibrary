@@ -21,11 +21,11 @@ public class UserRepository : IUserRepository
         => await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
     public async Task<User?> GetByIdAsync(Guid id)
-        => await _context.Users.FirstOrDefaultAsync(u => u.UserId == id);
+        => await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
 
     public async Task<(IReadOnlyList<User> Users, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize)
     {
-        var query = _context.Users.AsNoTracking().OrderBy(u => u.UserId);
+        var query = _context.Users.AsNoTracking().OrderBy(u => u.Id);
         var totalCount = await query.CountAsync();
         var users = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
         return (users, totalCount);
@@ -33,7 +33,7 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> DeleteByIdAsync(Guid id)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == id);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
         if (user is null) return false;
         user.IsDeleted = true;
         await _context.SaveChangesAsync();
@@ -41,10 +41,10 @@ public class UserRepository : IUserRepository
     }
 
     public async Task<bool> IsEmailDuplicateAsync(string email, Guid? excludeUserId = null)
-        => await _context.Users.AnyAsync(u => u.Email == email && (!excludeUserId.HasValue || u.UserId != excludeUserId.Value));
+        => await _context.Users.AnyAsync(u => u.Email == email && (!excludeUserId.HasValue || u.Id != excludeUserId.Value));
 
     public async Task<bool> IsUsernameDuplicateAsync(string username, Guid? excludeUserId = null)
-        => await _context.Users.AnyAsync(u => u.Username == username && (!excludeUserId.HasValue || u.UserId != excludeUserId.Value));
+        => await _context.Users.AnyAsync(u => u.Username == username && (!excludeUserId.HasValue || u.Id != excludeUserId.Value));
 
     public async Task AddAsync(User user)
     {

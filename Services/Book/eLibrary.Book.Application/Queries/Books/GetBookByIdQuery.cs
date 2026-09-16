@@ -45,7 +45,7 @@ public class GetBookByIdQueryHandler : IRequestHandler<GetBookByIdQuery, ApiResp
                 Author = book.Author ?? string.Empty,
                 Price = book.Price,
                 AvailableCount = book.AvailableCount,
-                CoverImageUrl = book.CoverImagePath == null ? null : "/" + book.CoverImagePath.Replace('\\', '/')
+                CoverImageUrl = book.CoverImageMongoId == null ? null : $"/api/Book/{book.Id}/cover"
             };
 
             return ApiResponse<BookDto>.Ok(dto, "Book retrieved successfully.");

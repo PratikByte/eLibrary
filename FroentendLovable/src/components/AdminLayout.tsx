@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Sidebar, adminNav } from "./Sidebar";
 import { Header } from "./Header";
+import { Loader } from "./Loader";
 import { getAuthSession, isAdminSession, type AuthSession } from "@/lib/api";
 
 export function AdminLayout({
@@ -25,7 +26,7 @@ export function AdminLayout({
   }, []);
 
   if (isCheckingRole) {
-    return <p className="p-6 text-sm text-muted-foreground">Checking permissions...</p>;
+    return <Loader label="Checking permissions..." />;
   }
 
   if (!isAdminSession(session)) {

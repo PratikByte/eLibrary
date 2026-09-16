@@ -48,6 +48,15 @@
       "Key": "identity-profiles"
     },
     {
+      // Book covers are public so browser image requests work without a bearer header.
+      "DownstreamPathTemplate": "/api/Book/{id}/cover",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 8002 }],
+      "UpstreamPathTemplate": "/api/Book/{id}/cover",
+      "UpstreamHttpMethod": ["GET"],
+      "Key": "book-cover"
+    },
+    {
       // Catalog routes are protected and forwarded to the Book service on port 8002.
       "DownstreamPathTemplate": "/api/Book/{everything}",
       "DownstreamScheme": "http",

@@ -38,7 +38,7 @@ public class AuthenticateUserHandler : IRequestHandler<AuthenticateUserCommand, 
 
         return new UserLoginOutputDto
         {
-            UserId = user.UserId,
+            UserId = user.Id,
             Username = user.Username,
             Email = user.Email,
             Role = user.Role,

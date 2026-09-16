@@ -35,6 +35,7 @@ public class BookDbContext : DbContext
             entity.Property(x => x.Author).IsRequired(false);
             entity.Property(x => x.Price).IsRequired();
             entity.Property(x => x.AvailableCount).IsRequired();
+            entity.Property(x => x.CoverImageMongoId).HasMaxLength(100);
         });
 
         modelBuilder.Entity<BorrowRecordEntity>(entity =>

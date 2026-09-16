@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Library } from "lucide-react";
 import { UserLayout } from "@/components/UserLayout";
+import { Loader } from "@/components/Loader";
 import { FilterBar, FilterField } from "@/components/FilterBar";
 import { ListPagination } from "@/components/list-pagination";
 import { Button } from "@/components/ui/button";
@@ -176,7 +177,7 @@ function CatalogPage() {
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {info ? <p className="text-sm text-muted-foreground">{info}</p> : null}
-      {isLoading ? <p className="text-sm text-muted-foreground">Loading books...</p> : null}
+      {isLoading ? <Loader label="Loading books..." /> : null}
 
       <div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

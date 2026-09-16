@@ -1,5 +1,7 @@
 using eLibrary.Book.Application.Commands.Books;
 using eLibrary.Book.Application.DTOs;
+using eLibrary.Book.Application.Interfaces;
+using eLibrary.Book.Application.Interfaces.Repositories;
 using eLibrary.Book.Application.Queries.Books;
 using eLibrary.Book.Application.Shared;
 using eLibrary.Book.Domain.Pagination;
@@ -19,10 +21,25 @@ namespace eLibrary.Book.API.Controllers;
 public class BookController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IBookRepository _bookRepository;
+    private readonly IMongoMediaStore _coverStore;
 
-    public BookController(IMediator mediator)
+    public BookController(IMediator mediator, IBookRepository bookRepository, IMongoMediaStore coverStore)
     {
         _mediator = mediator;
+        _bookRepository = bookRepository;
+        _coverStore = coverStore;
+    }
+
+    [AllowAnonymous]
+    [HttpGet("{id}/cover")]
+    public async Task<IActionResult> GetCover(Guid id, CancellationToken cancellationToken)
+    {
+        var book = await _bookRepository.GetBookByIdAsync(id, cancellationToken);
+        if (book?.CoverImageMongoId is null) return NotFound();
+
+        var cover = await _coverStore.GetAsync(book.CoverImageMongoId, cancellationToken);
+        return cover is null ? NotFound() : File(cover.Value.Content, cover.Value.ContentType);
     }
 
     /// <summary>

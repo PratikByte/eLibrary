@@ -52,6 +52,7 @@ export type UserDto = {
   username: string;
   email: string;
   role: string;
+  profileImageUrl?: string | null;
 };
 
 export type UserProfileResponseDto = UserDto & {
@@ -106,19 +107,29 @@ export function mapBookDto(dto: BookDto): Book {
     available: dto.availableCount,
   };
   if (dto.price != null) book.price = dto.price;
-  if (dto.coverImageUrl) book.cover = dto.coverImageUrl;
+  if (dto.coverImageUrl) {
+    book.cover = dto.coverImageUrl.startsWith("http")
+      ? dto.coverImageUrl
+      : `${API_BASE_URL}${dto.coverImageUrl}`;
+  }
   return book;
 }
 
 export function mapUserDto(dto: UserDto): Member {
-  return {
+  const member = {
     id: dto.userId,
     name: dto.username,
     email: dto.email,
     role: dto.role.trim().toLowerCase() === "admin" ? "Admin" : "Member",
     loans: 0,
     joined: "—",
-  };
+  } as Member;
+  if (dto.profileImageUrl) {
+    member.avatar = dto.profileImageUrl.startsWith("http")
+      ? dto.profileImageUrl
+      : `${API_BASE_URL}${dto.profileImageUrl}`;
+  }
+  return member;
 }
 
 export function unwrapApi<T>(response: ApiResponse<T>): T {
@@ -378,8 +389,16 @@ export async function deleteUser(userId: number) {
 }
 
 export async function getUserProfile(userId: number) {
-  const response = await apiRequest<ApiResponse<UserDto>>(`/api/UserProfile/${userId}`);
-  return unwrapApi(response);
+  const response = await apiRequest<ApiResponse<UserProfileResponseDto>>(`/api/UserProfile/${userId}`);
+  const profile = unwrapApi(response) as UserProfileResponseDto;
+  return {
+    ...profile,
+    profileImageUrl: profile.profileImageUrl?.startsWith("http")
+      ? profile.profileImageUrl
+      : profile.profileImageUrl
+        ? `${API_BASE_URL}${profile.profileImageUrl}`
+        : profile.profileImageUrl,
+  };
 }
 
 export async function updateUserProfile(
@@ -394,7 +413,15 @@ export async function updateUserProfile(
     method: "PUT",
     body: form,
   });
-  return unwrapApi(response);
+  const profile = unwrapApi(response);
+  return {
+    ...profile,
+    profileImageUrl: profile.profileImageUrl?.startsWith("http")
+      ? profile.profileImageUrl
+      : profile.profileImageUrl
+        ? `${API_BASE_URL}${profile.profileImageUrl}`
+        : profile.profileImageUrl,
+  };
 }
 
 export async function getAvailableBooksReport(pageNumber = 1, pageSize = DEFAULT_PAGE_SIZE) {

@@ -15,5 +15,7 @@ public class Book : BaseEntity
     public float Price { get; set; }
     public int PublishedYear { get; set; }
     public int AvailableCount { get; set; }
-    public string? CoverImagePath { get; set; }
+    // PostgreSQL stores only this MongoDB GridFS document id; cover bytes stay in MongoDB.
+    public string? CoverImageMongoId { get; set; }
+
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BookOpen, ArrowLeft, ArrowLeftRight, BookMarked } from "lucide-react";
 import { UserLayout } from "@/components/UserLayout";
+import { Loader } from "@/components/Loader";
 import { SectionCard } from "@/components/SectionCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +77,7 @@ function BookDetailsPage() {
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {info ? <p className="text-sm text-muted-foreground">{info}</p> : null}
-      {!book && !error ? <p className="text-sm text-muted-foreground">Loading book...</p> : null}
+      {!book && !error ? <Loader label="Loading book..." /> : null}
 
       {book ? (
         <div className="grid gap-5 lg:grid-cols-3">

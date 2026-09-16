@@ -101,6 +101,15 @@
       "UpstreamHttpMethod": ["GET"],
       "Key": "book-files"
     }
+      // Book covers are public so browser image requests work without a bearer header.
+      "DownstreamPathTemplate": "/api/Book/{id}/cover",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "book-api", "Port": 8080 }],
+      "UpstreamPathTemplate": "/api/Book/{id}/cover",
+      "UpstreamHttpMethod": ["GET"],
+      "Key": "book-cover"
+    },
+    {
   ],
   "GlobalConfiguration": {
     "BaseUrl": "http://localhost:8000"

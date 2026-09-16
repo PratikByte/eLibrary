@@ -1,0 +1,11 @@
+<!-- DefaultUser.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <!-- Light Teal Background Circle -->
+  <circle cx="250" cy="250" r="200" fill="#D8F2F6" />
+
+  <!-- Dark Teal Head -->
+  <circle cx="250" cy="195" r="65" fill="#00808C" />
+
+  <!-- Dark Teal Shoulders/Body -->
+  <path d="M 145 365 A 110 90 0 0 1 355 365 Z" fill="#00808C" />
+</svg>

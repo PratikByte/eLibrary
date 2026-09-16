@@ -12,7 +12,7 @@ using eLibrary.Infrastructure.Data;
 namespace eLibrary.Migrations
 {
     [DbContext(typeof(EBookDBContext))]
-    [Migration("20260310151653_InitialCreate")]
+    [Migration("20260911174726_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace eLibrary.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "8.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);

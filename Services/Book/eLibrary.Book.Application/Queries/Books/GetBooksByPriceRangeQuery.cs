@@ -44,7 +44,7 @@ public class GetBooksByPriceRangeQueryHandler : IRequestHandler<GetBooksByPriceR
                 Author = x.Author ?? string.Empty,
                 Price = x.Price,
                 AvailableCount = x.AvailableCount,
-                CoverImageUrl = x.CoverImagePath == null ? null : "/" + x.CoverImagePath.Replace('\\', '/')
+                CoverImageUrl = x.CoverImageMongoId == null ? null : $"/api/Book/{x.Id}/cover"
             }).ToList();
 
             return ApiResponse<List<BookDto>>.Ok(items, "Books retrieved successfully.");

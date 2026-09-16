@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using eLibrary.Book.Application.DTOs;
 using eLibrary.Book.Application.Interfaces.Repositories;
 using eLibrary.Book.Application.Shared;
@@ -9,10 +8,8 @@ namespace eLibrary.Book.Application.Commands.Books;
 
 public sealed class UpdateBookPriceCommand : IRequest<ApiResponse<BookDto>>
 {
-    [Range(1, int.MaxValue)]
     public Guid BookId { get; set; }
 
-    [Range(0.01, 1000000)]
     public float NewPrice { get; set; }
 }
 
@@ -51,9 +48,9 @@ public sealed class UpdateBookPriceCommandHandler : IRequestHandler<UpdateBookPr
                 Author = book.Author ?? string.Empty,
                 Price = book.Price,
                 AvailableCount = book.AvailableCount,
-                CoverImageUrl = book.CoverImagePath is null
+                CoverImageUrl = book.CoverImageMongoId is null
                     ? null
-                    : "/" + book.CoverImagePath.Replace('\\', '/')
+                    : $"/api/Book/{book.Id}/cover"
             }, "Book price updated successfully.");
         }
         catch (Exception ex)

@@ -1,7 +1,7 @@
 # eLibrary Microservice Migration Tracker
 
 **Last updated:** 11 September 2026  
-**Current step:** Step 9 - Database architecture: PostgreSQL + MongoDB
+**Current step:** Step 10 - Initialize fresh databases and seed test data
 **Rule:** Complete each step in order. Keep the monolith available until final production cutover.
 
 | Step | Phase | Status | Depends on |
@@ -14,7 +14,7 @@
 | 6 | Move borrowing, returning, and reports into Book | Complete | Step 5 |
 | 7 | Switch frontend to Gateway | Complete | Step 6 |
 | 8 | Standardize entity IDs and audit trails | Complete | Step 7 |
-| 9 | Correct database architecture: PostgreSQL + MongoDB | In progress | Step 8 |
+| 9 | Correct database architecture: PostgreSQL + MongoDB | Complete | Step 8 |
 | 10 | Initialize fresh databases and seed test data | Pending | Step 9 |
 | 11 | Correct backend persistence and file storage | Pending | Step 10 |
 | 12 | Correct frontend API and media integration | Pending | Step 11 |
@@ -32,7 +32,7 @@
 - [x] Step 6 - Borrowing and reports
 - [x] Step 7 - Frontend Gateway cutover
 - [x] Step 8 - Entity UUIDs, audit fields, and soft delete
-- [ ] Step 9 - Database architecture: PostgreSQL + MongoDB
+- [x] Step 9 - Database architecture: PostgreSQL + MongoDB
 - [ ] Step 10 - Fresh database initialization and test seed
 - [ ] Step 11 - Backend persistence and file storage correction
 - [ ] Step 12 - Frontend API and media correction
@@ -83,11 +83,22 @@ Update the status and checklist after each verified step.
 
 ## Target Database Architecture
 
-- **PostgreSQL:** relational data. Identity owns `Users` and `OtpRecords`; Book owns `Books` and `BorrowRecords`.
-- **MongoDB:** book-cover and profile-image storage. Store image metadata/reference values in PostgreSQL; do not store image bytes in relational tables.
+- **PostgreSQL:** one database named `elibrary`. Identity owns `Users` and `OtpRecords`; Book owns `Books` and `BorrowRecords`. Service ownership separates table access even though both services use the same database.
+- **Service communication:** if Book needs user information, it calls the Identity Service API. Book must not query Identity tables directly or reference `IdentityDbContext`.
+- **MongoDB:** one reusable `media` collection stores unstructured image bytes and metadata (`category`, filename, content type). PostgreSQL stores only the returned Mongo `ObjectId` string in `CoverImageMongoId` or `ProfileImageMongoId`; no image path or bytes are stored relationally.
+- **Reusable media service:** both services expose the same `IMongoMediaStore` operations for save, read, and delete. Future media such as author photos uses the same Mongo settings and category field without a new persistence design.
 - **Migration source:** no old-record migration is required for the new environment. Keep the existing SQL Server `EBook` database only as the rollback/reference system until cutover.
-- **Service isolation:** use one PostgreSQL server with separate service databases unless a later requirement demands stronger isolation.
+- **Service isolation:** use one PostgreSQL server and one `elibrary` database, with table ownership enforced by service code and API boundaries.
 - **Docker timing:** add PostgreSQL and MongoDB to Docker Compose only after the application passes Step 13.
+
+## Step 9 Verification Summary
+
+- Identity and Book use PostgreSQL connection strings through EF Core Npgsql.
+- MongoDB settings are shared by database and collection name in both services.
+- Book covers and user profile images are stored as Mongo media documents; PostgreSQL stores only their Mongo IDs.
+- A default profile image remains a local fallback until a user uploads a Mongo-backed image.
+- `dotnet build` passed for `eLibrary.Identity.API` and `eLibrary.Book.API` with zero warnings and zero errors on 11 September 2026.
+- Fresh PostgreSQL EF migrations were generated for both service DbContexts and applied to the shared `elibrary` database. Identity and Book use separate migration-history tables so both services can own tables in the same database.
 
 ## Next Window Handoff
 

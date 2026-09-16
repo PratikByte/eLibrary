@@ -22,9 +22,12 @@ builder.Services.AddSwaggerGen();
 
 // 2) Database and repositories
 builder.Services.AddDbContext<IdentityDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsql => npgsql.MigrationsHistoryTable("__IdentityMigrationsHistory")));
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IMongoMediaStore, MongoMediaStore>();
 
 // 3) Identity and auth services
 builder.Services.AddScoped<ITokenService, TokenService>();

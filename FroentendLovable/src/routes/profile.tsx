@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { UserLayout } from "@/components/UserLayout";
+import { Loader } from "@/components/Loader";
 import { ProfileForm } from "@/components/ProfileForm";
 import { apiRequest, getAuthSession } from "@/lib/api";
 import { useEffect, useState } from "react";
@@ -80,7 +81,7 @@ function ProfilePage() {
           profileImageUrl={profile.profileImageUrl ?? null}
         />
       ) : (
-        <p className="text-sm text-muted-foreground">Loading your profile...</p>
+        <Loader label="Loading your profile..." />
       )}
     </UserLayout>
   );

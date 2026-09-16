@@ -1,4 +1,5 @@
 using eLibrary.Book.Application.Interfaces.Repositories;
+using eLibrary.Book.Application.Interfaces;
 using eLibrary.Book.Application.Shared;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -29,19 +30,16 @@ public class UpdateBookCoverCommandHandler : IRequestHandler<UpdateBookCoverComm
         { ".jpg", ".jpeg", ".png", ".webp" };
     private readonly IBookRepository _bookRepository;
     private readonly ILogger<UpdateBookCoverCommandHandler> _logger;
-    private readonly string _coverFolder = Path.Combine("wwwroot", "book-covers");
+    private readonly IMongoMediaStore _coverStore;
 
     public UpdateBookCoverCommandHandler(
         IBookRepository bookRepository,
         ILogger<UpdateBookCoverCommandHandler> logger,
-        IWebHostEnvironment environment)
+        IMongoMediaStore coverStore)
     {
         _bookRepository = bookRepository;
         _logger = logger;
-        _coverFolder = Path.Combine(environment.ContentRootPath, "wwwroot", "book-covers");
-
-        if (!Directory.Exists(_coverFolder))
-            Directory.CreateDirectory(_coverFolder);
+        _coverStore = coverStore;
     }
 
     public async Task<ApiResponse<bool>> Handle(UpdateBookCoverCommand request, CancellationToken cancellationToken)
@@ -60,28 +58,12 @@ public class UpdateBookCoverCommandHandler : IRequestHandler<UpdateBookCoverComm
                 return ApiResponse<bool>.Fail("Cover image must be a non-empty JPG, PNG, or WebP file no larger than 5 MB.");
             }
 
-            var oldCoverPath = book.CoverImagePath;
-            var fileName = Guid.NewGuid() + extension.ToLowerInvariant();
-            var fullPath = Path.Combine(_coverFolder, fileName);
-
-            await using (var stream = new FileStream(fullPath, FileMode.Create))
-            {
-                await request.CoverImage.CopyToAsync(stream, cancellationToken);
-            }
-
-            book.CoverImagePath = Path.Combine("book-covers", fileName).Replace('\\', '/');
+            var oldCoverId = book.CoverImageMongoId;
+            book.CoverImageMongoId = await _coverStore.SaveAsync(request.CoverImage, "book-cover", cancellationToken);
             await _bookRepository.UpdateAsync(book, cancellationToken);
 
-            if (!string.IsNullOrWhiteSpace(oldCoverPath))
-            {
-                var oldFullPath = Path.Combine(
-                    _coverFolder,
-                    Path.GetFileName(oldCoverPath));
-                if (File.Exists(oldFullPath) && !string.Equals(oldFullPath, fullPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    File.Delete(oldFullPath);
-                }
-            }
+            if (!string.IsNullOrWhiteSpace(oldCoverId))
+                await _coverStore.DeleteAsync(oldCoverId, cancellationToken);
 
             return ApiResponse<bool>.Ok(true, "Book cover updated successfully.");
         }

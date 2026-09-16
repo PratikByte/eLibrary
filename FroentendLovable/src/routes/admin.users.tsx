@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Trash2, Eye, Plus, Pencil } from "lucide-react";
+import { Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { MemberDetailsDialog, type MemberDialogMode } from "@/components/MemberDetailsDialog";
@@ -9,6 +9,15 @@ import { FilterBar, FilterField } from "@/components/FilterBar";
 import { ListPagination } from "@/components/list-pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -32,6 +41,7 @@ import {
   deleteUser,
   getUsersPaged,
   mapUserDto,
+  registerUser,
   updateUserProfile,
 } from "@/lib/api";
 
@@ -60,6 +70,7 @@ function AdminUsersPage() {
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [dialogMode, setDialogMode] = useState<MemberDialogMode>("view");
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
 
   const loadUsers = useCallback(async (pageNumber = 1) => {
     setError(null);
@@ -112,6 +123,12 @@ function AdminUsersPage() {
     }
   };
 
+  const handleAddMember = async (username: string, email: string, password: string) => {
+    await registerUser(username, email, password);
+    setInfo(`Added ${username}.`);
+    await loadUsers(1);
+  };
+
   return (
     <AdminLayout title="Users" subtitle="Manage library members" searchPlaceholder="Search members…">
       <FilterBar searchPlaceholder="Search by name, email or member ID…">
@@ -154,7 +171,7 @@ function AdminUsersPage() {
         title="Members"
         description={`${totalRecords} registered accounts`}
         action={
-          <Button size="sm" disabled title="Members register themselves; no admin create-user API exists.">
+          <Button size="sm" onClick={() => setAddMemberOpen(true)}>
             <Plus className="h-4 w-4" /> Add member
           </Button>
         }
@@ -247,6 +264,13 @@ function AdminUsersPage() {
         onSave={(updated, profileImage) => void handleSave(updated, profileImage)}
       />
 
+      <AddMemberDialog
+        open={addMemberOpen}
+        onOpenChange={setAddMemberOpen}
+        onCreated={handleAddMember}
+        onError={setError}
+      />
+
       <ConfirmDialog
         open={memberToDelete !== null}
         onOpenChange={(open) => {
@@ -264,5 +288,93 @@ function AdminUsersPage() {
         onConfirm={() => void handleDelete()}
       />
     </AdminLayout>
+  );
+}
+
+function AddMemberDialog({
+  open,
+  onOpenChange,
+  onCreated,
+  onError,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated: (username: string, email: string, password: string) => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    onError("");
+
+    const formData = new FormData(event.currentTarget);
+    try {
+      await onCreated(
+        String(formData.get("username") ?? "").trim(),
+        String(formData.get("email") ?? "").trim(),
+        String(formData.get("password") ?? ""),
+      );
+      event.currentTarget.reset();
+      onOpenChange(false);
+    } catch (requestError) {
+      onError(requestError instanceof Error ? requestError.message : "Unable to add this member.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add member</DialogTitle>
+          <DialogDescription>Create a new User account for the library.</DialogDescription>
+        </DialogHeader>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="admin-add-username">Username</Label>
+            <Input id="admin-add-username" name="username" autoComplete="username" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="admin-add-email">Email</Label>
+            <Input id="admin-add-email" name="email" type="email" autoComplete="email" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="admin-add-password">Password</Label>
+            <div className="relative">
+              <Input
+                id="admin-add-password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                className="pr-10"
+                minLength={6}
+                required
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-foreground hover:text-primary"
+                onClick={() => setShowPassword((visible) => !visible)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Adding..." : "Add member"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

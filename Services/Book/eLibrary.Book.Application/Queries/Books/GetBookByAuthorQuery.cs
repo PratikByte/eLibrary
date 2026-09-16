@@ -47,7 +47,7 @@ public class GetBookByAuthorQueryHandler : IRequestHandler<GetBookByAuthorQuery,
                 Author = x.Author ?? string.Empty,
                 Price = x.Price,
                 AvailableCount = x.AvailableCount,
-                CoverImageUrl = x.CoverImagePath == null ? null : "/" + x.CoverImagePath.Replace('\\', '/')
+                CoverImageUrl = x.CoverImageMongoId == null ? null : $"/api/Book/{x.Id}/cover"
             }).ToList();
 
             return new PagedResponse<BookDto>(items, totalRecords, request.PageNumber, request.PageSize, "Books by author retrieved successfully.");

@@ -1,5 +1,6 @@
 using eLibrary.Book.Application.DTOs;
 using eLibrary.Book.Application.Interfaces.Repositories;
+using eLibrary.Book.Application.Interfaces;
 using eLibrary.Book.Application.Shared;
 using BookEntity = eLibrary.Book.Domain.Entities.Book;
 using MediatR;
@@ -30,19 +31,16 @@ public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse
         { ".jpg", ".jpeg", ".png", ".webp" };
     private readonly IBookRepository _bookRepository;
     private readonly ILogger<AddBookCommandHandler> _logger;
-    private readonly string _coverFolder = Path.Combine("wwwroot", "book-covers");
+    private readonly IMongoMediaStore _coverStore;
 
     public AddBookCommandHandler(
         IBookRepository bookRepository,
         ILogger<AddBookCommandHandler> logger,
-        IWebHostEnvironment environment)
+        IMongoMediaStore coverStore)
     {
         _bookRepository = bookRepository;
         _logger = logger;
-        _coverFolder = Path.Combine(environment.ContentRootPath, "wwwroot", "book-covers");
-
-        if (!Directory.Exists(_coverFolder))
-            Directory.CreateDirectory(_coverFolder);
+        _coverStore = coverStore;
     }
 
     public async Task<ApiResponse<Guid>> Handle(AddBookCommand request, CancellationToken cancellationToken)
@@ -55,7 +53,7 @@ public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse
                 return ApiResponse<Guid>.Fail("Duplicate book entry.", "A book with the same title and author already exists.");
             }
 
-            string? coverImagePath = null;
+            string? coverImageMongoId = null;
 
             if (request.BookDto.CoverImage is not null)
             {
@@ -67,15 +65,7 @@ public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse
                     return ApiResponse<Guid>.Fail("Cover image must be a non-empty JPG, PNG, or WebP file no larger than 5 MB.");
                 }
 
-                var fileName = Guid.NewGuid() + extension.ToLowerInvariant();
-                var fullPath = Path.Combine(_coverFolder, fileName);
-
-                await using (var stream = new FileStream(fullPath, FileMode.Create))
-                {
-                    await request.BookDto.CoverImage.CopyToAsync(stream, cancellationToken);
-                }
-
-                coverImagePath = Path.Combine("book-covers", fileName).Replace('\\', '/');
+                coverImageMongoId = await _coverStore.SaveAsync(request.BookDto.CoverImage, "book-cover", cancellationToken);
             }
 
             var newBook = new BookEntity
@@ -85,7 +75,7 @@ public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse
                 Price = request.BookDto.Price,
                 PublishedYear = request.BookDto.PublishedYear,
                 AvailableCount = request.BookDto.AvailableCount,
-                CoverImagePath = coverImagePath
+                CoverImageMongoId = coverImageMongoId
             };
 
             await _bookRepository.AddBookAsync(newBook);

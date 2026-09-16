@@ -28,7 +28,7 @@ public class GetAvailableBooksQueryHandler : IRequestHandler<GetAvailableBooksQu
             Author = book.Author ?? string.Empty,
             Price = book.Price,
             AvailableCount = book.AvailableCount,
-            CoverImageUrl = book.CoverImagePath
+            CoverImageUrl = book.CoverImageMongoId == null ? null : $"/api/Book/{book.Id}/cover"
         }).ToList();
 
         return new PagedResponse<BookDto>(items, totalRecords, request.PageNumber, request.PageSize,

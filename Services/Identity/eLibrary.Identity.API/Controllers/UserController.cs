@@ -38,7 +38,7 @@ public class UserController : ControllerBase
 
         return Ok(new
         {
-            user.UserId,
+            user.Id,
             user.Username,
             user.Email,
             user.Role
@@ -57,11 +57,11 @@ public class UserController : ControllerBase
         {
             data = users.Select(user => new
             {
-                user.UserId,
+                user.Id,
                 user.Username,
                 user.Email,
                 user.Role,
-                user.ProfileImagePath
+                ProfileImageUrl = user.ProfileImageMongoId is null ? "/profile-images/DefaultUser.svg" : $"/api/UserProfile/{user.Id}/profile-image"
             }),
             totalRecords = totalCount,
             pageNumber,

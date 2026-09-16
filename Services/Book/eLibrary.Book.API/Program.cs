@@ -1,8 +1,10 @@
 using System.Text;
 using eLibrary.Book.Application.Commands.Books;
 using eLibrary.Book.Application.Interfaces.Repositories;
+using eLibrary.Book.Application.Interfaces;
 using eLibrary.Book.Infrastructure.Persistence;
 using eLibrary.Book.Infrastructure.Repositories;
+using eLibrary.Book.Infrastructure.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MediatR;
@@ -22,11 +24,14 @@ builder.Services.AddSwaggerGen();
 
 // Database
 builder.Services.AddDbContext<BookDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsql => npgsql.MigrationsHistoryTable("__BookMigrationsHistory")));
 
 // Book service dependencies
 builder.Services.AddScoped<IBookRepository, BookRepository>();
 builder.Services.AddScoped<IBorrowRepository, BorrowRepository>();
+builder.Services.AddScoped<IMongoMediaStore, MongoMediaStore>();
 
 // MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(AddBookCommand).Assembly));
@@ -61,9 +66,6 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
-
-var coverFolder = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), "book-covers");
-Directory.CreateDirectory(coverFolder);
 
 if (app.Environment.IsDevelopment())
 {

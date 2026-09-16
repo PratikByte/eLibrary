@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using eLibrary.Identity.Application.Interfaces.Repositories;
+using eLibrary.Identity.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,10 +12,12 @@ namespace eLibrary.Identity.API.Controllers;
 public class UserProfileController : ControllerBase
 {
     private readonly IUserRepository _userRepository;
+    private readonly IMongoMediaStore _profileImageStore;
 
-    public UserProfileController(IUserRepository userRepository)
+    public UserProfileController(IUserRepository userRepository, IMongoMediaStore profileImageStore)
     {
         _userRepository = userRepository;
+        _profileImageStore = profileImageStore;
     }
 
     [HttpGet("{id}")]
@@ -27,11 +30,11 @@ public class UserProfileController : ControllerBase
 
         return Ok(new
         {
-            user.UserId,
+            user.Id,
             user.Username,
             user.Email,
             user.Role,
-            user.ProfileImagePath
+            ProfileImageUrl = user.ProfileImageMongoId is null ? "/profile-images/DefaultUser.svg" : $"/api/UserProfile/{user.Id}/profile-image"
         });
     }
 
@@ -49,23 +52,18 @@ public class UserProfileController : ControllerBase
         if (!string.IsNullOrWhiteSpace(request.Email))
             user.Email = request.Email;
 
-        if (!string.IsNullOrWhiteSpace(request.ProfileImagePath))
-            user.ProfileImagePath = request.ProfileImagePath;
-
         if (request.ProfileImage is not null)
         {
             if (request.ProfileImage.Length == 0)
                 return BadRequest(new { message = "Profile image cannot be empty." });
 
-            var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
-            var directory = Path.Combine(webRoot, "profile-images");
-            Directory.CreateDirectory(directory);
-            var extension = Path.GetExtension(request.ProfileImage.FileName);
-            var fileName = $"{Guid.NewGuid():N}{extension}";
-            var filePath = Path.Combine(directory, fileName);
-            await using var stream = System.IO.File.Create(filePath);
-            await request.ProfileImage.CopyToAsync(stream);
-            user.ProfileImagePath = $"/profile-images/{fileName}";
+            if (user.ProfileImageMongoId is not null)
+                await _profileImageStore.DeleteAsync(user.ProfileImageMongoId, HttpContext.RequestAborted);
+
+            user.ProfileImageMongoId = await _profileImageStore.SaveAsync(
+                request.ProfileImage,
+                "profile-image",
+                HttpContext.RequestAborted);
         }
 
         await _userRepository.UpdateAsync(user);
@@ -73,12 +71,22 @@ public class UserProfileController : ControllerBase
 
         return Ok(new
         {
-            user.UserId,
+            user.Id,
             user.Username,
             user.Email,
             user.Role,
-            user.ProfileImagePath
+            ProfileImageUrl = user.ProfileImageMongoId is null ? "/profile-images/DefaultUser.svg" : $"/api/UserProfile/{user.Id}/profile-image"
         });
+    }
+
+    [AllowAnonymous]
+    [HttpGet("{id}/profile-image")]
+    public async Task<IActionResult> GetProfileImage(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user?.ProfileImageMongoId is null) return NotFound();
+        var image = await _profileImageStore.GetAsync(user.ProfileImageMongoId, cancellationToken);
+        return image is null ? NotFound() : File(image.Value.Content, image.Value.ContentType);
     }
 
     private bool CanAccessUser(Guid userId)
@@ -94,6 +102,5 @@ public class UpdateProfileRequest
 {
     public string? Username { get; set; }
     public string? Email { get; set; }
-    public string? ProfileImagePath { get; set; }
     public IFormFile? ProfileImage { get; set; }
 }

@@ -1,4 +1,5 @@
 using eLibrary.Book.Application.Interfaces.Repositories;
+using eLibrary.Book.Application.Interfaces;
 using eLibrary.Book.Application.Shared;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -23,16 +24,16 @@ public class DeleteBookCoverCommandHandler : IRequestHandler<DeleteBookCoverComm
 {
     private readonly IBookRepository _bookRepository;
     private readonly ILogger<DeleteBookCoverCommandHandler> _logger;
-    private readonly string _coverFolder;
+    private readonly IMongoMediaStore _coverStore;
 
     public DeleteBookCoverCommandHandler(
         IBookRepository bookRepository,
         ILogger<DeleteBookCoverCommandHandler> logger,
-        IWebHostEnvironment environment)
+        IMongoMediaStore coverStore)
     {
         _bookRepository = bookRepository;
         _logger = logger;
-        _coverFolder = Path.Combine(environment.ContentRootPath, "wwwroot", "book-covers");
+        _coverStore = coverStore;
     }
 
     public async Task<ApiResponse<bool>> Handle(DeleteBookCoverCommand request, CancellationToken cancellationToken)
@@ -43,16 +44,10 @@ public class DeleteBookCoverCommandHandler : IRequestHandler<DeleteBookCoverComm
             if (book == null)
                 return ApiResponse<bool>.Fail("Book not found.");
 
-            if (!string.IsNullOrWhiteSpace(book.CoverImagePath))
-            {
-                var fullPath = Path.Combine(_coverFolder, Path.GetFileName(book.CoverImagePath));
-                if (System.IO.File.Exists(fullPath))
-                {
-                    System.IO.File.Delete(fullPath);
-                }
-            }
+            if (!string.IsNullOrWhiteSpace(book.CoverImageMongoId))
+                await _coverStore.DeleteAsync(book.CoverImageMongoId, cancellationToken);
 
-            book.CoverImagePath = null;
+            book.CoverImageMongoId = null;
             await _bookRepository.UpdateAsync(book, cancellationToken);
 
             return ApiResponse<bool>.Ok(true, "Book cover deleted successfully.");

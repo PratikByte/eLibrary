@@ -3,7 +3,7 @@ import { Menu, Search, Bell, LogOut, UserCircle, Settings, KeyRound } from "luci
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarNav, SidebarLogo, type NavItem } from "./Sidebar";
 import { clearAuthSession } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api-config";
 
 type HeaderProps = {
   title: string;
@@ -94,6 +95,10 @@ export function Header({
                 aria-label="Account menu"
               >
                 <Avatar className="h-9 w-9">
+                  <AvatarImage
+                    src={`${API_BASE_URL}/profile-images/DefaultUser.svg`}
+                    alt={`${userName} profile`}
+                  />
                   <AvatarFallback className="bg-accent text-accent-foreground">
                     {initials}
                   </AvatarFallback>
