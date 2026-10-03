@@ -27,7 +27,7 @@ export const sampleBooks: Book[] = [
 ];
 
 export type Member = {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: "Admin" | "Member";
@@ -38,10 +38,10 @@ export type Member = {
 };
 
 export const sampleMembers: Member[] = [
-  { id: 1, name: "Aarav Shah", email: "aarav@example.com", role: "Member", loans: 2, joined: "12 Jan 2026" },
-  { id: 2, name: "Priya Nair", email: "priya@example.com", role: "Member", loans: 0, joined: "03 Feb 2026" },
-  { id: 3, name: "Daniel Cruz", email: "daniel@example.com", role: "Admin", loans: 1, joined: "22 Nov 2025" },
-  { id: 4, name: "Sara Khan", email: "sara@example.com", role: "Member", loans: 3, joined: "08 Mar 2026" },
+  { id: "1", name: "Aarav Shah", email: "aarav@example.com", role: "Member", loans: 2, joined: "12 Jan 2026" },
+  { id: "2", name: "Priya Nair", email: "priya@example.com", role: "Member", loans: 0, joined: "03 Feb 2026" },
+  { id: "3", name: "Daniel Cruz", email: "daniel@example.com", role: "Admin", loans: 1, joined: "22 Nov 2025" },
+  { id: "4", name: "Sara Khan", email: "sara@example.com", role: "Member", loans: 3, joined: "08 Mar 2026" },
 ];
 
 export type Loan = {

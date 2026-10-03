@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ImagePreviewDialog } from "@/components/ImagePreviewDialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ export function MemberDetailsDialog({
   const [draft, setDraft] = useState<Member | null>(member);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
+  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
 
   useEffect(() => {
     setDraft(member);
@@ -160,8 +162,7 @@ export function MemberDetailsDialog({
               </Button>
               <Button
                 onClick={() => {
-                  onSave?.(draft, photoFile);
-                  onOpenChange(false);
+                  setSaveConfirmOpen(true);
                 }}
               >
                 Save changes
@@ -173,6 +174,19 @@ export function MemberDetailsDialog({
             </Button>
           )}
         </DialogFooter>
+
+        <ConfirmDialog
+          open={saveConfirmOpen}
+          onOpenChange={setSaveConfirmOpen}
+          title="Update member"
+          description={`Are you sure you want to save changes to "${draft.name}"?`}
+          confirmLabel="Save changes"
+          variant="default"
+          onConfirm={() => {
+            onSave?.(draft, photoFile);
+            onOpenChange(false);
+          }}
+        />
 
         <ImagePreviewDialog
           open={photoPreviewOpen}

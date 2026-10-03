@@ -17,7 +17,7 @@ import type { Book } from "@/lib/placeholder-data";
 export const Route = createFileRoute("/admin/reports")({
   head: () => ({
     meta: [
-      { title: "Reports — eLibrary Admin" },
+      { title: "eLibrary | Digital Library" },
       { name: "description", content: "Availability and overdue reports for the library collection." },
       { property: "og:title", content: "Reports — eLibrary Admin" },
       {

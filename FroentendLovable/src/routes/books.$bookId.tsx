@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 export const Route = createFileRoute("/books/$bookId")({
   head: () => ({
     meta: [
-      { title: "Book Details — eLibrary" },
+      { title: "eLibrary | Digital Library" },
       { name: "description", content: "Book details, availability and borrowing options." },
       { property: "og:title", content: "Book Details — eLibrary" },
       { property: "og:description", content: "Book details, availability and borrowing options." },

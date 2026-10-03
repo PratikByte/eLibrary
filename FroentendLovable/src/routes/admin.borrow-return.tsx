@@ -21,7 +21,7 @@ import { borrowBook, returnBook } from "@/lib/api";
 export const Route = createFileRoute("/admin/borrow-return")({
   head: () => ({
     meta: [
-      { title: "Borrow & Return — eLibrary Admin" },
+      { title: "eLibrary | Digital Library" },
       { name: "description", content: "Issue books to members and record returns with due dates and fines." },
       { property: "og:title", content: "Borrow & Return — eLibrary Admin" },
       {

@@ -78,7 +78,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "eLibrary" },
+      { title: "eLibrary | Digital Library" },
       { name: "description", content: "Library management for members and librarians." },
       { property: "og:title", content: "eLibrary" },
       { property: "og:description", content: "Library management for members and librarians." },

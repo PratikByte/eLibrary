@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -48,7 +48,7 @@ import {
 export const Route = createFileRoute("/admin/users")({
   head: () => ({
     meta: [
-      { title: "Members — eLibrary Admin" },
+      { title: "eLibrary | Digital Library" },
       { name: "description", content: "View library members, their loans and account details." },
       { property: "og:title", content: "Members — eLibrary Admin" },
       {
@@ -304,21 +304,35 @@ function AddMemberDialog({
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingMember, setPendingMember] = useState<{
+    username: string;
+    email: string;
+    password: string;
+  } | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSubmitting(true);
     onError("");
 
     const formData = new FormData(event.currentTarget);
+    setPendingMember({
+      username: String(formData.get("username") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim(),
+      password: String(formData.get("password") ?? ""),
+    });
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmedAdd = async () => {
+    if (!pendingMember) return;
+    setIsSubmitting(true);
     try {
-      await onCreated(
-        String(formData.get("username") ?? "").trim(),
-        String(formData.get("email") ?? "").trim(),
-        String(formData.get("password") ?? ""),
-      );
-      event.currentTarget.reset();
+      await onCreated(pendingMember.username, pendingMember.email, pendingMember.password);
+      formRef.current?.reset();
       onOpenChange(false);
+      setPendingMember(null);
     } catch (requestError) {
       onError(requestError instanceof Error ? requestError.message : "Unable to add this member.");
     } finally {
@@ -333,7 +347,7 @@ function AddMemberDialog({
           <DialogTitle>Add member</DialogTitle>
           <DialogDescription>Create a new User account for the library.</DialogDescription>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form ref={formRef} className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="admin-add-username">Username</Label>
             <Input id="admin-add-username" name="username" autoComplete="username" required />
@@ -374,6 +388,19 @@ function AddMemberDialog({
             </Button>
           </DialogFooter>
         </form>
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title="Add member"
+          description={
+            pendingMember
+              ? `Are you sure you want to add "${pendingMember.username}"?`
+              : "Are you sure you want to add this member?"
+          }
+          confirmLabel="Add member"
+          variant="default"
+          onConfirm={() => void handleConfirmedAdd()}
+        />
       </DialogContent>
     </Dialog>
   );

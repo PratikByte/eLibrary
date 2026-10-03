@@ -9,7 +9,7 @@ import { useState, type FormEvent } from "react";
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
     meta: [
-      { title: "Reset Password — eLibrary" },
+      { title: "eLibrary | Digital Library" },
       { name: "description", content: "Request a one-time code to reset your eLibrary password." },
       { property: "og:title", content: "Reset Password — eLibrary" },
       {

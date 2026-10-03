@@ -11,7 +11,7 @@ import { useState, type FormEvent } from "react";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Sign In — eLibrary" },
+      { title: "eLibrary | Digital Library" },
       {
         name: "description",
         content: "Sign in to your eLibrary account to borrow and manage books.",

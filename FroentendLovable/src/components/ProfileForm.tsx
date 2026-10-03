@@ -16,7 +16,7 @@ export function ProfileForm({
   role,
   profileImageUrl,
 }: {
-  userId: number;
+  userId: string;
   name: string;
   email: string;
   role: string;

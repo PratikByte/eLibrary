@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 export const Route = createFileRoute("/admin/")({
   head: () => ({
     meta: [
-      { title: "Admin Dashboard — eLibrary" },
+      { title: "eLibrary | Digital Library" },
       { name: "description", content: "Library overview: inventory, members, loans and overdue books." },
       { property: "og:title", content: "Admin Dashboard — eLibrary" },
       {

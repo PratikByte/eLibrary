@@ -17,7 +17,7 @@ import { sampleLoans } from "@/lib/placeholder-data";
 export const Route = createFileRoute("/my-loans")({
   head: () => ({
     meta: [
-      { title: "My Loans — eLibrary" },
+      { title: "eLibrary | Digital Library" },
       { name: "description", content: "Track your borrowed books, due dates, returns and fines." },
       { property: "og:title", content: "My Loans — eLibrary" },
       {

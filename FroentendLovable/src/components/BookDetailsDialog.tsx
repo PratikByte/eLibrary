@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ImagePreviewDialog } from "@/components/ImagePreviewDialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { Book } from "@/lib/placeholder-data";
 
 export type BookDialogMode = "view" | "edit";
@@ -40,6 +41,8 @@ export function BookDetailsDialog({
   const [draft, setDraft] = useState<Book | null>(book);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreviewOpen, setCoverPreviewOpen] = useState(false);
+  const [coverRemovalConfirmOpen, setCoverRemovalConfirmOpen] = useState(false);
+  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
 
   useEffect(() => {
     setDraft(book);
@@ -163,14 +166,13 @@ export function BookDetailsDialog({
                 Cancel
               </Button>
               {draft.cover && onRemoveCover ? (
-                <Button variant="ghost" onClick={() => onRemoveCover(draft)}>
+                <Button variant="ghost" onClick={() => setCoverRemovalConfirmOpen(true)}>
                   Remove cover
                 </Button>
               ) : null}
               <Button
                 onClick={() => {
-                  onSave?.(draft, coverFile);
-                  onOpenChange(false);
+                  setSaveConfirmOpen(true);
                 }}
               >
                 Save changes
@@ -182,6 +184,39 @@ export function BookDetailsDialog({
             </Button>
           )}
         </DialogFooter>
+
+        <ConfirmDialog
+          open={saveConfirmOpen}
+          onOpenChange={setSaveConfirmOpen}
+          title="Update book"
+          description={`Are you sure you want to save changes to "${draft.title}"?`}
+          confirmLabel="Save changes"
+          variant="default"
+          onConfirm={() => {
+            onSave?.(draft, coverFile);
+            onOpenChange(false);
+          }}
+        />
+
+        <ConfirmDialog
+          open={coverRemovalConfirmOpen}
+          onOpenChange={(open) => {
+            setCoverRemovalConfirmOpen(open);
+          }}
+          title="Remove cover"
+          description={
+            draft.cover
+              ? `Are you sure you want to remove the cover from "${draft.title}"? This action cannot be undone.`
+              : "Are you sure you want to remove this cover? This action cannot be undone."
+          }
+          confirmLabel="Remove cover"
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={() => {
+            onRemoveCover?.(draft);
+            setCoverRemovalConfirmOpen(false);
+          }}
+        />
 
         <ImagePreviewDialog
           open={coverPreviewOpen}

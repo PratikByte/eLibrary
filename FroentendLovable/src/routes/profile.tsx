@@ -2,27 +2,21 @@ import { createFileRoute } from "@tanstack/react-router";
 import { UserLayout } from "@/components/UserLayout";
 import { Loader } from "@/components/Loader";
 import { ProfileForm } from "@/components/ProfileForm";
-import { apiRequest, getAuthSession } from "@/lib/api";
+import { getAuthSession, getUserProfile } from "@/lib/api";
 import { useEffect, useState } from "react";
 
 type UserProfile = {
-  userId: number;
+  userId: string;
   username: string;
   email: string;
   role: string;
   profileImageUrl?: string | null;
 };
 
-type ApiResponse<T> = {
-  success: boolean;
-  message?: string | null;
-  data?: T | null;
-};
-
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "My Profile — eLibrary" },
+      { title: "eLibrary | Digital Library" },
       { name: "description", content: "Update your eLibrary email, username and profile picture." },
       { property: "og:title", content: "My Profile — eLibrary" },
       {
@@ -46,14 +40,16 @@ function ProfilePage() {
     }
 
     let cancelled = false;
-    apiRequest<ApiResponse<UserProfile>>(`/api/UserProfile/${session.userId}`)
+    getUserProfile(session.userId)
       .then((response) => {
         if (cancelled) return;
-        if (!response.success || !response.data) {
-          setError(response.message ?? "Unable to load your profile.");
-          return;
-        }
-        setProfile(response.data);
+        setProfile({
+          userId: response.userId,
+          username: response.username,
+          email: response.email,
+          role: response.role,
+          profileImageUrl: response.profileImageUrl,
+        });
       })
       .catch((requestError) => {
         if (!cancelled) {

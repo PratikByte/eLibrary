@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus, Pencil, Trash2, Library, Eye } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -51,7 +51,7 @@ import {
 export const Route = createFileRoute("/admin/books")({
   head: () => ({
     meta: [
-      { title: "Manage Books — eLibrary Admin" },
+      { title: "eLibrary | Digital Library" },
       { name: "description", content: "Browse the inventory, add new titles and keep book details up to date." },
       { property: "og:title", content: "Manage Books — eLibrary Admin" },
       {
@@ -358,23 +358,40 @@ function AddBookDialog({
   onError: (message: string) => void;
 }) {
   const [isSaving, setIsSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingBook, setPendingBook] = useState<{
+    title: string;
+    author: string;
+    price: number;
+    publishedYear: number;
+    availableCount: number;
+    coverImage: File | null;
+  } | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
+    const formData = new FormData(event.currentTarget);
+    const coverImage = formData.get("coverImage");
+    setPendingBook({
+      title: String(formData.get("title") ?? ""),
+      author: String(formData.get("author") ?? ""),
+      price: Number(formData.get("price") ?? 0),
+      publishedYear: Number(formData.get("publishedYear") ?? new Date().getFullYear()),
+      availableCount: Number(formData.get("availableCount") ?? 0),
+      coverImage: coverImage instanceof File && coverImage.size > 0 ? coverImage : null,
+    });
+    setConfirmOpen(true);
+  }
+
+  async function handleConfirmedAdd() {
+    if (!pendingBook) return;
     setIsSaving(true);
     try {
-      await addBook({
-        title: String(formData.get("title") ?? ""),
-        author: String(formData.get("author") ?? ""),
-        price: Number(formData.get("price") ?? 0),
-        publishedYear: Number(formData.get("publishedYear") ?? new Date().getFullYear()),
-        availableCount: Number(formData.get("availableCount") ?? 0),
-        coverImage: (formData.get("coverImage") as File | null)?.size ? (formData.get("coverImage") as File) : null,
-      });
-      form.reset();
+      await addBook(pendingBook);
+      formRef.current?.reset();
       onOpenChange(false);
+      setPendingBook(null);
       await onCreated();
     } catch (requestError) {
       onError(requestError instanceof Error ? requestError.message : "Unable to add this book.");
@@ -390,7 +407,7 @@ function AddBookDialog({
           <DialogTitle>Add book</DialogTitle>
           <DialogDescription>Create a title in the library inventory.</DialogDescription>
         </DialogHeader>
-        <form className="grid gap-4" onSubmit={handleSubmit}>
+        <form ref={formRef} className="grid gap-4" onSubmit={handleSubmit}>
           <div className="grid gap-2">
             <Label htmlFor="add-title">Title</Label>
             <Input id="add-title" name="title" required />
@@ -432,6 +449,19 @@ function AddBookDialog({
             </Button>
           </DialogFooter>
         </form>
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title="Add book"
+          description={
+            pendingBook
+              ? `Are you sure you want to add "${pendingBook.title}"?`
+              : "Are you sure you want to add this book?"
+          }
+          confirmLabel="Add book"
+          variant="default"
+          onConfirm={() => void handleConfirmedAdd()}
+        />
       </DialogContent>
     </Dialog>
   );

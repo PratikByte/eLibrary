@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "My Dashboard — eLibrary" },
+      { title: "eLibrary | Digital Library" },
       {
         name: "description",
         content: "Your borrowed books, due dates and reading recommendations in one place.",

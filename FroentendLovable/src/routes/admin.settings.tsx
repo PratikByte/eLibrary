@@ -18,7 +18,7 @@ import {
 export const Route = createFileRoute("/admin/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — eLibrary Admin" },
+      { title: "eLibrary | Digital Library" },
       {
         name: "description",
         content: "Admin-only settings: library rules, loan limits, fines and account access.",

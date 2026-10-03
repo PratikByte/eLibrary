@@ -2,7 +2,7 @@ import { API_BASE_URL } from "./api-config";
 import type { Book, Member } from "./placeholder-data";
 
 export interface AuthSession {
-  userId: number;
+  userId: string;
   username: string;
   email: string;
   role: string;
@@ -48,7 +48,8 @@ export type BookDto = {
 };
 
 export type UserDto = {
-  userId: number;
+  id?: string;
+  userId?: string;
   username: string;
   email: string;
   role: string;
@@ -61,7 +62,7 @@ export type UserProfileResponseDto = UserDto & {
 
 export type BorrowRecordDto = {
   id: number;
-  userId: number;
+  userId: string;
   userName?: string | null;
   bookId: number;
   bookName?: string | null;
@@ -77,9 +78,19 @@ export function getAuthSession(): AuthSession | null {
   if (!value) return null;
 
   try {
-    return JSON.parse(value) as AuthSession;
+    const session = JSON.parse(value) as Partial<AuthSession>;
+    if (
+      typeof session.userId !== "string" ||
+      !session.userId ||
+      typeof session.token !== "string" ||
+      !session.token
+    ) {
+      clearAuthSession();
+      return null;
+    }
+    return session as AuthSession;
   } catch {
-    localStorage.removeItem(AUTH_SESSION_KEY);
+    clearAuthSession();
     return null;
   }
 }
@@ -116,8 +127,12 @@ export function mapBookDto(dto: BookDto): Book {
 }
 
 export function mapUserDto(dto: UserDto): Member {
+  const id = dto.id ?? dto.userId;
+  if (!id) {
+    throw new Error("User response is missing its ID.");
+  }
   const member = {
-    id: dto.userId,
+    id,
     name: dto.username,
     email: dto.email,
     role: dto.role.trim().toLowerCase() === "admin" ? "Admin" : "Member",
@@ -169,9 +184,13 @@ export function normalizeAuthSession(payload: unknown): AuthSession {
   if (!token) {
     throw new Error("Login succeeded but no token was returned.");
   }
+  const userId = readProperty(source, "userId", "UserId", "id", "Id");
+  if (userId === undefined || userId === null || String(userId).length === 0) {
+    throw new Error("Login succeeded but no user ID was returned.");
+  }
 
   return {
-    userId: Number(readProperty(source, "userId", "UserId") ?? 0),
+    userId: String(userId),
     username: String(readProperty(source, "username", "Username") ?? ""),
     email: String(readProperty(source, "email", "Email") ?? ""),
     role: String(readProperty(source, "role", "Role") ?? "User"),
@@ -356,7 +375,7 @@ export async function deleteBook(bookId: number) {
   return unwrapApi(response);
 }
 
-export async function borrowBook(userId: number, bookId: number) {
+export async function borrowBook(userId: string, bookId: number) {
   const response = await apiRequest<ApiResponse<BorrowRecordDto>>("/api/BorrowReturnBook/borrow", {
     method: "POST",
     body: { userId, bookId },
@@ -376,23 +395,29 @@ export async function getUsersPaged(pageNumber = 1, pageSize = DEFAULT_PAGE_SIZE
   return apiRequest<DataPagedResponse<UserDto>>(`/api/User?pageNumber=${pageNumber}&pageSize=${pageSize}`);
 }
 
-export async function getUserById(userId: number) {
+export async function getUserById(userId: string) {
   const response = await apiRequest<ApiResponse<UserDto>>(`/api/User/${userId}`);
   return unwrapApi(response);
 }
 
-export async function deleteUser(userId: number) {
+export async function deleteUser(userId: string) {
   const response = await apiRequest<ApiResponse<boolean>>(`/api/User?id=${userId}`, {
     method: "DELETE",
   });
   return unwrapApi(response);
 }
 
-export async function getUserProfile(userId: number) {
-  const response = await apiRequest<ApiResponse<UserProfileResponseDto>>(`/api/UserProfile/${userId}`);
-  const profile = unwrapApi(response) as UserProfileResponseDto;
+function normalizeUserProfileResponse(
+  response: ApiResponse<UserProfileResponseDto> | UserProfileResponseDto,
+): UserProfileResponseDto & { userId: string } {
+  const profile = "success" in response ? unwrapApi(response) : response;
+  const userId = profile.id ?? profile.userId;
+  if (userId === undefined || userId === null || userId.length === 0) {
+    throw new Error("User profile response is missing its ID.");
+  }
   return {
     ...profile,
+    userId: String(userId),
     profileImageUrl: profile.profileImageUrl?.startsWith("http")
       ? profile.profileImageUrl
       : profile.profileImageUrl
@@ -401,27 +426,29 @@ export async function getUserProfile(userId: number) {
   };
 }
 
+export async function getUserProfile(userId: string) {
+  const response = await apiRequest<ApiResponse<UserProfileResponseDto> | UserProfileResponseDto>(
+    `/api/UserProfile/${userId}`,
+  );
+  return normalizeUserProfileResponse(response);
+}
+
 export async function updateUserProfile(
-  userId: number,
+  userId: string,
   input: { username?: string; email?: string; profileImage?: File | null },
 ) {
   const form = new FormData();
   if (input.username) form.append("Username", input.username);
   if (input.email) form.append("Email", input.email);
   if (input.profileImage) form.append("ProfileImage", input.profileImage);
-  const response = await apiRequest<ApiResponse<UserProfileResponseDto>>(`/api/UserProfile/${userId}`, {
-    method: "PUT",
-    body: form,
-  });
-  const profile = unwrapApi(response);
-  return {
-    ...profile,
-    profileImageUrl: profile.profileImageUrl?.startsWith("http")
-      ? profile.profileImageUrl
-      : profile.profileImageUrl
-        ? `${API_BASE_URL}${profile.profileImageUrl}`
-        : profile.profileImageUrl,
-  };
+  const response = await apiRequest<ApiResponse<UserProfileResponseDto> | UserProfileResponseDto>(
+    `/api/UserProfile/${userId}`,
+    {
+      method: "PUT",
+      body: form,
+    },
+  );
+  return normalizeUserProfileResponse(response);
 }
 
 export async function getAvailableBooksReport(pageNumber = 1, pageSize = DEFAULT_PAGE_SIZE) {

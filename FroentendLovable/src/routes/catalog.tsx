@@ -29,7 +29,7 @@ import { useCallback, useEffect, useState } from "react";
 export const Route = createFileRoute("/catalog")({
   head: () => ({
     meta: [
-      { title: "Book Catalog — eLibrary" },
+      { title: "eLibrary | Digital Library" },
       {
         name: "description",
         content: "Browse the eLibrary collection, filter by author or price, and borrow titles.",

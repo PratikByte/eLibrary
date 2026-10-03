@@ -10,7 +10,7 @@ import { useState, type FormEvent } from "react";
 export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
-      { title: "Create Account — eLibrary" },
+      { title: "eLibrary | Digital Library" },
       { name: "description", content: "Register for an eLibrary account to borrow books online." },
       { property: "og:title", content: "Create Account — eLibrary" },
       {
