@@ -19,4 +19,3 @@ public interface IUserRepository
     Task <(List<User> users, int totalCount)> GetUsersAsync(int pageNumber, int pageSize,CancellationToken cancellationToken);
     Task <bool>DeleteByIdAsync(int id, CancellationToken cancellationToken);
 }
-

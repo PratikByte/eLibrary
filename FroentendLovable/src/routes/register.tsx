@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/register")({
 });
 
 function RegisterPage() {
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -40,7 +41,7 @@ function RegisterPage() {
         String(formData.get("email") ?? ""),
         String(formData.get("password") ?? ""),
       );
-      window.location.assign("/login");
+      await navigate({ to: "/login" });
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to register.");
     } finally {

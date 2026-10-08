@@ -47,9 +47,16 @@ public class BookController : ControllerBase
     /// </summary>
     [Authorize(Roles = "User,Admin")]
     [HttpGet("paged")]
-    public async Task<IActionResult> GetBooksPaged([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+    public async Task<IActionResult> GetBooksPaged(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 5,
+        [FromQuery] string? searchTerm = null,
+        [FromQuery] bool? inStock = null,
+        [FromQuery] float? minPrice = null,
+        [FromQuery] float? maxPrice = null)
     {
-        var result = await _mediator.Send(new GetBooksQuery(pageNumber, pageSize));
+        var result = await _mediator.Send(
+            new GetBooksQuery(pageNumber, pageSize, searchTerm, inStock, minPrice, maxPrice));
         return Ok(result);
     }
 

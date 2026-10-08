@@ -47,12 +47,16 @@ public class UserController : ControllerBase
 
     [Authorize(Roles = "Admin")]
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 5,
+        [FromQuery] string? searchTerm = null,
+        [FromQuery] string? role = null)
     {
         if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
             return BadRequest(new { message = "Page number must be positive and page size must be between 1 and 100." });
 
-        var (users, totalCount) = await _userRepository.GetPagedAsync(pageNumber, pageSize);
+        var (users, totalCount) = await _userRepository.GetPagedAsync(pageNumber, pageSize, searchTerm, role);
         return Ok(new
         {
             data = users.Select(user => new
@@ -66,6 +70,7 @@ public class UserController : ControllerBase
             totalRecords = totalCount,
             pageNumber,
             pageSize,
+            totalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
             success = true,
             message = "Users fetched successfully."
         });

@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "./api-config";
 import type { Book, Member } from "./placeholder-data";
+import { toast } from "sonner";
 
 export interface AuthSession {
   userId: string;
@@ -169,6 +170,36 @@ function formatApiError(error: {
   return error.message ?? error.title ?? "Request failed.";
 }
 
+function getApiMessage(response: unknown): string | undefined {
+  if (typeof response === "string" && response.trim()) return response.trim();
+  if (!response || typeof response !== "object") return undefined;
+  const message = Reflect.get(response, "message");
+  if (typeof message === "string" && message.trim()) return message.trim();
+  return getApiMessage(Reflect.get(response, "data"));
+}
+
+function withApiToast<T>(request: Promise<T>, successMessage: string): Promise<T>;
+function withApiToast<T, R>(
+  request: Promise<T>,
+  successMessage: string,
+  mapResponse: (response: T) => R,
+): Promise<R>;
+async function withApiToast<T, R = T>(
+  request: Promise<T>,
+  successMessage: string,
+  mapResponse?: (response: T) => R,
+): Promise<T | R> {
+  try {
+    const response = await request;
+    const result = mapResponse ? mapResponse(response) : response;
+    toast.success(getApiMessage(response) ?? successMessage);
+    return result;
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : "Request failed.");
+    throw error;
+  }
+}
+
 function readProperty(source: Record<string, unknown>, ...keys: string[]) {
   for (const key of keys) {
     if (source[key] !== undefined && source[key] !== null) {
@@ -252,6 +283,23 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     throw new Error(fallback);
   }
 
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    "success" in parsed &&
+    Reflect.get(parsed, "success") === false
+  ) {
+    throw new Error(
+      formatApiError(
+        parsed as {
+          message?: string | null;
+          title?: string | null;
+          errors?: string[] | Record<string, string[]> | null;
+        },
+      ),
+    );
+  }
+
   if (response.status === 204) {
     return undefined as T;
   }
@@ -260,40 +308,67 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 }
 
 export async function login(username: string, password: string): Promise<AuthSession> {
-  const response = await apiRequest<unknown>("/api/Auth/login", {
-    method: "POST",
-    body: { username, password },
-  });
-  const session = normalizeAuthSession(response);
-  setAuthSession(session);
-  return session;
+  return withApiToast(
+    (async () => {
+      const response = await apiRequest<unknown>("/api/Auth/login", {
+        method: "POST",
+        body: { username, password },
+      });
+      const session = normalizeAuthSession(response);
+      setAuthSession(session);
+      return session;
+    })(),
+    "Signed in successfully.",
+  );
 }
 
 export async function registerUser(username: string, email: string, password: string) {
-  return apiRequest("/api/Auth/register", {
-    method: "POST",
-    body: { username, email, password },
-  });
+  return withApiToast(
+    apiRequest("/api/Auth/register", {
+      method: "POST",
+      body: { username, email, password },
+    }),
+    "Account created successfully.",
+  );
 }
 
 export async function requestPasswordOtp(email: string) {
-  return apiRequest<string>("/api/Auth/forget-password", {
-    method: "POST",
-    body: { email },
-  });
+  return withApiToast(
+    apiRequest<string>("/api/Auth/forget-password", {
+      method: "POST",
+      body: { email },
+    }),
+    "If the email exists, a reset code was sent.",
+  );
 }
 
 export async function resetPasswordWithOtp(email: string, otp: string, newPassword: string) {
-  return apiRequest<string>("/api/Auth/reset-password", {
-    method: "POST",
-    body: { email, otp, newPassword },
-  });
+  return withApiToast(
+    apiRequest<string>("/api/Auth/reset-password", {
+      method: "POST",
+      body: { email, otp, newPassword },
+    }),
+    "Password reset successfully.",
+  );
 }
 
-export async function getBooksPaged(pageNumber = 1, pageSize = DEFAULT_PAGE_SIZE) {
-  return apiRequest<PagedResponse<BookDto>>(
-    `/api/Book/paged?pageNumber=${pageNumber}&pageSize=${pageSize}`,
-  );
+export async function getBooksPaged(
+  pageNumber = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+  searchTerm = "",
+  inStock?: boolean,
+  minPrice?: number,
+  maxPrice?: number,
+) {
+  const query = new URLSearchParams({
+    pageNumber: String(pageNumber),
+    pageSize: String(pageSize),
+  });
+  if (searchTerm.trim()) query.set("searchTerm", searchTerm.trim());
+  if (inStock !== undefined) query.set("inStock", String(inStock));
+  if (minPrice !== undefined) query.set("minPrice", String(minPrice));
+  if (maxPrice !== undefined) query.set("maxPrice", String(maxPrice));
+  return apiRequest<PagedResponse<BookDto>>(`/api/Book/paged?${query.toString()}`);
 }
 
 export async function getBookById(bookId: number) {
@@ -336,63 +411,95 @@ export async function addBook(input: {
   if (input.coverImage) {
     form.append("CoverImage", input.coverImage);
   }
-  const response = await apiRequest<ApiResponse<number>>("/api/Book/add-book", {
-    method: "POST",
-    body: form,
-  });
-  return unwrapApi(response);
+  return withApiToast(
+    apiRequest<ApiResponse<number>>("/api/Book/add-book", {
+      method: "POST",
+      body: form,
+    }),
+    "Book added successfully.",
+    unwrapApi,
+  );
 }
 
 export async function updateBookPrice(bookId: number, newPrice: number) {
-  const response = await apiRequest<ApiResponse<BookDto>>("/api/Book/update-price", {
-    method: "PUT",
-    body: { bookId, newPrice },
-  });
-  return unwrapApi(response);
+  return withApiToast(
+    apiRequest<ApiResponse<BookDto>>("/api/Book/update-price", {
+      method: "PUT",
+      body: { bookId, newPrice },
+    }),
+    "Book price updated successfully.",
+    unwrapApi,
+  );
 }
 
 export async function updateBookCover(bookId: number, coverImage: File) {
   const form = new FormData();
   form.append("coverImage", coverImage);
-  const response = await apiRequest<ApiResponse<BookDto>>(`/api/Book/${bookId}/cover`, {
-    method: "PUT",
-    body: form,
-  });
-  return unwrapApi(response);
+  return withApiToast(
+    apiRequest<ApiResponse<BookDto>>(`/api/Book/${bookId}/cover`, {
+      method: "PUT",
+      body: form,
+    }),
+    "Book cover updated successfully.",
+    unwrapApi,
+  );
 }
 
 export async function deleteBookCover(bookId: number) {
-  const response = await apiRequest<ApiResponse<boolean>>(`/api/Book/${bookId}/cover`, {
-    method: "DELETE",
-  });
-  return unwrapApi(response);
+  return withApiToast(
+    apiRequest<ApiResponse<boolean>>(`/api/Book/${bookId}/cover`, {
+      method: "DELETE",
+    }),
+    "Book cover removed successfully.",
+    unwrapApi,
+  );
 }
 
 export async function deleteBook(bookId: number) {
-  const response = await apiRequest<ApiResponse<boolean>>(`/api/Book/${bookId}`, {
-    method: "DELETE",
-  });
-  return unwrapApi(response);
+  return withApiToast(
+    apiRequest<ApiResponse<boolean>>(`/api/Book/${bookId}`, {
+      method: "DELETE",
+    }),
+    "Book deleted successfully.",
+    unwrapApi,
+  );
 }
 
 export async function borrowBook(userId: string, bookId: number) {
-  const response = await apiRequest<ApiResponse<BorrowRecordDto>>("/api/BorrowReturnBook/borrow", {
-    method: "POST",
-    body: { userId, bookId },
-  });
-  return unwrapApi(response);
+  return withApiToast(
+    apiRequest<ApiResponse<BorrowRecordDto>>("/api/BorrowReturnBook/borrow", {
+      method: "POST",
+      body: { userId, bookId },
+    }),
+    "Book borrowed successfully.",
+    unwrapApi,
+  );
 }
 
 export async function returnBook(borrowId: number) {
-  const response = await apiRequest<ApiResponse<BorrowRecordDto>>("/api/BorrowReturnBook/return", {
-    method: "POST",
-    body: { borrowId },
-  });
-  return unwrapApi(response);
+  return withApiToast(
+    apiRequest<ApiResponse<BorrowRecordDto>>("/api/BorrowReturnBook/return", {
+      method: "POST",
+      body: { borrowId },
+    }),
+    "Book returned successfully.",
+    unwrapApi,
+  );
 }
 
-export async function getUsersPaged(pageNumber = 1, pageSize = DEFAULT_PAGE_SIZE) {
-  return apiRequest<DataPagedResponse<UserDto>>(`/api/User?pageNumber=${pageNumber}&pageSize=${pageSize}`);
+export async function getUsersPaged(
+  pageNumber = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+  searchTerm = "",
+  role = "all",
+) {
+  const query = new URLSearchParams({
+    pageNumber: String(pageNumber),
+    pageSize: String(pageSize),
+  });
+  if (searchTerm.trim()) query.set("searchTerm", searchTerm.trim());
+  if (role !== "all") query.set("role", role);
+  return apiRequest<DataPagedResponse<UserDto>>(`/api/User?${query.toString()}`);
 }
 
 export async function getUserById(userId: string) {
@@ -401,10 +508,13 @@ export async function getUserById(userId: string) {
 }
 
 export async function deleteUser(userId: string) {
-  const response = await apiRequest<ApiResponse<boolean>>(`/api/User?id=${userId}`, {
-    method: "DELETE",
-  });
-  return unwrapApi(response);
+  return withApiToast(
+    apiRequest<ApiResponse<boolean>>(`/api/User?id=${userId}`, {
+      method: "DELETE",
+    }),
+    "Member removed successfully.",
+    unwrapApi,
+  );
 }
 
 function normalizeUserProfileResponse(
@@ -441,14 +551,17 @@ export async function updateUserProfile(
   if (input.username) form.append("Username", input.username);
   if (input.email) form.append("Email", input.email);
   if (input.profileImage) form.append("ProfileImage", input.profileImage);
-  const response = await apiRequest<ApiResponse<UserProfileResponseDto> | UserProfileResponseDto>(
-    `/api/UserProfile/${userId}`,
-    {
-      method: "PUT",
-      body: form,
-    },
+  return withApiToast(
+    apiRequest<ApiResponse<UserProfileResponseDto> | UserProfileResponseDto>(
+      `/api/UserProfile/${userId}`,
+      {
+        method: "PUT",
+        body: form,
+      },
+    ),
+    "Profile updated successfully.",
+    normalizeUserProfileResponse,
   );
-  return normalizeUserProfileResponse(response);
 }
 
 export async function getAvailableBooksReport(pageNumber = 1, pageSize = DEFAULT_PAGE_SIZE) {

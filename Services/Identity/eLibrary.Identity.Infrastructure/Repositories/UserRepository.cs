@@ -23,11 +23,32 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByIdAsync(Guid id)
         => await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
 
-    public async Task<(IReadOnlyList<User> Users, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize)
+    public async Task<(IReadOnlyList<User> Users, int TotalCount)> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        string? searchTerm = null,
+        string? role = null)
     {
-        var query = _context.Users.AsNoTracking().OrderBy(u => u.Id);
+        IQueryable<User> query = _context.Users.AsNoTracking();
+        var normalizedSearchTerm = searchTerm?.Trim().ToLower();
+        var normalizedRole = role?.Trim();
+        if (!string.IsNullOrEmpty(normalizedSearchTerm))
+        {
+            query = query.Where(user =>
+                user.Username.ToLower().Contains(normalizedSearchTerm) ||
+                user.Email.ToLower().Contains(normalizedSearchTerm));
+        }
+        if (!string.IsNullOrEmpty(normalizedRole))
+        {
+            query = query.Where(user => user.Role.ToLower() == normalizedRole.ToLower());
+        }
+
         var totalCount = await query.CountAsync();
-        var users = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+        var users = await query
+            .OrderBy(user => user.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
         return (users, totalCount);
     }
 

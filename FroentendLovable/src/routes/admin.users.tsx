@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { Download, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { MemberDetailsDialog, type MemberDialogMode } from "@/components/MemberDetailsDialog";
@@ -36,6 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Member } from "@/lib/placeholder-data";
+import { exportToExcel } from "@/lib/export-excel";
 import {
   DEFAULT_PAGE_SIZE,
   deleteUser,
@@ -62,6 +63,9 @@ export const Route = createFileRoute("/admin/users")({
 
 function AdminUsersPage() {
   const [members, setMembers] = useState<Member[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [loanFilter, setLoanFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -71,24 +75,29 @@ function AdminUsersPage() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [dialogMode, setDialogMode] = useState<MemberDialogMode>("view");
   const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const usersRequestId = useRef(0);
 
-  const loadUsers = useCallback(async (pageNumber = 1) => {
+  const loadUsers = useCallback(async (pageNumber = 1, query = "", role = "all") => {
+    const requestId = ++usersRequestId.current;
     setError(null);
     try {
-      const response = await getUsersPaged(pageNumber, DEFAULT_PAGE_SIZE);
+      const response = await getUsersPaged(pageNumber, DEFAULT_PAGE_SIZE, query, role);
+      if (requestId !== usersRequestId.current) return;
       setMembers((response.data ?? []).map(mapUserDto));
       setPage(response.pageNumber || pageNumber);
       setTotalPages(response.totalPages || 1);
       setTotalRecords(response.totalRecords || (response.data ?? []).length);
     } catch (requestError) {
+      if (requestId !== usersRequestId.current) return;
       setError(requestError instanceof Error ? requestError.message : "Unable to load members.");
       setMembers([]);
     }
   }, []);
 
   useEffect(() => {
-    void loadUsers(1);
-  }, [loadUsers]);
+    const timeoutId = window.setTimeout(() => void loadUsers(1, searchTerm, roleFilter), 250);
+    return () => window.clearTimeout(timeoutId);
+  }, [loadUsers, searchTerm, roleFilter]);
 
   const openMember = (member: Member, mode: MemberDialogMode) => {
     setSelectedMember(member);
@@ -104,7 +113,7 @@ function AdminUsersPage() {
       });
       setInfo(`Updated ${updated.name}.`);
       setSelectedMember(null);
-      await loadUsers(page);
+      await loadUsers(page, searchTerm, roleFilter);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to update this member.");
     }
@@ -116,7 +125,7 @@ function AdminUsersPage() {
       await deleteUser(memberToDelete.id);
       setInfo(`Removed ${memberToDelete.name}.`);
       setMemberToDelete(null);
-      await loadUsers(page);
+      await loadUsers(page, searchTerm, roleFilter);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to remove this member.");
       setMemberToDelete(null);
@@ -126,26 +135,61 @@ function AdminUsersPage() {
   const handleAddMember = async (username: string, email: string, password: string) => {
     await registerUser(username, email, password);
     setInfo(`Added ${username}.`);
-    await loadUsers(1);
+    await loadUsers(1, searchTerm, roleFilter);
+  };
+
+  const handleExport = async () => {
+    setError(null);
+    try {
+      const firstPage = await getUsersPaged(1, 100, searchTerm, roleFilter);
+      const exportMembers = (firstPage.data ?? []).map(mapUserDto);
+      for (let nextPage = 2; nextPage <= firstPage.totalPages; nextPage += 1) {
+        const response = await getUsersPaged(nextPage, 100, searchTerm, roleFilter);
+        exportMembers.push(...(response.data ?? []).map(mapUserDto));
+      }
+
+      exportToExcel(
+        exportMembers.map((member) => ({
+          ID: member.id,
+          Username: member.name,
+          Email: member.email,
+          Role: member.role,
+        })),
+        "elibrary-users",
+        "Users",
+      );
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to export users.");
+    }
   };
 
   return (
-    <AdminLayout title="Users" subtitle="Manage library members" searchPlaceholder="Search members…">
-      <FilterBar searchPlaceholder="Search by name, email or member ID…">
+    <AdminLayout title="Users" subtitle="Manage library members">
+      <FilterBar
+        inline
+        searchPlaceholder="Search by username or email..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        onClear={() => {
+          setSearchTerm("");
+          setRoleFilter("all");
+          setLoanFilter("all");
+        }}
+      >
         <FilterField label="Role">
-          <Select defaultValue="all">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
             <SelectTrigger aria-label="Role">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All roles</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="member">Member</SelectItem>
+              <SelectItem value="Admin">Admin</SelectItem>
+              <SelectItem value="User">User</SelectItem>
             </SelectContent>
           </Select>
         </FilterField>
         <FilterField label="Active loans">
-          <Select defaultValue="all">
+          <Select value={loanFilter} onValueChange={setLoanFilter}>
             <SelectTrigger aria-label="Active loans">
               <SelectValue />
             </SelectTrigger>
@@ -156,12 +200,6 @@ function AdminUsersPage() {
             </SelectContent>
           </Select>
         </FilterField>
-        <FilterField label="Joined from" htmlFor="member-from">
-          <Input id="member-from" type="date" />
-        </FilterField>
-        <FilterField label="Joined to" htmlFor="member-to">
-          <Input id="member-to" type="date" />
-        </FilterField>
       </FilterBar>
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -171,9 +209,14 @@ function AdminUsersPage() {
         title="Members"
         description={`${totalRecords} registered accounts`}
         action={
-          <Button size="sm" onClick={() => setAddMemberOpen(true)}>
-            <Plus className="h-4 w-4" /> Add member
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setAddMemberOpen(true)}>
+              <Plus className="h-4 w-4" /> Add member
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => void handleExport()}>
+              <Download className="h-4 w-4" /> Export
+            </Button>
+          </div>
         }
       >
         <div className="overflow-x-auto">
@@ -251,7 +294,11 @@ function AdminUsersPage() {
             </TableBody>
           </Table>
         </div>
-        <ListPagination page={page} totalPages={totalPages} onPageChange={(next) => void loadUsers(next)} />
+        <ListPagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={(next) => void loadUsers(next, searchTerm, roleFilter)}
+        />
       </SectionCard>
 
       <MemberDetailsDialog

@@ -11,14 +11,28 @@ namespace eLibrary.Book.Application.Queries.Books;
 /// </summary>
 public class GetBooksQuery : IRequest<PagedResponse<BookDto>>
 {
-    public GetBooksQuery(int pageNumber, int pageSize)
+    public GetBooksQuery(
+        int pageNumber,
+        int pageSize,
+        string? searchTerm = null,
+        bool? inStock = null,
+        float? minPrice = null,
+        float? maxPrice = null)
     {
         PageNumber = pageNumber;
         PageSize = pageSize;
+        SearchTerm = searchTerm;
+        InStock = inStock;
+        MinPrice = minPrice;
+        MaxPrice = maxPrice;
     }
 
     public int PageNumber { get; }
     public int PageSize { get; }
+    public string? SearchTerm { get; }
+    public bool? InStock { get; }
+    public float? MinPrice { get; }
+    public float? MaxPrice { get; }
 }
 
 public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, PagedResponse<BookDto>>
@@ -36,7 +50,14 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, PagedResponse
     {
         try
         {
-            var (books, totalRecords) = await _bookRepository.GetAllAsync(request.PageNumber, request.PageSize, cancellationToken);
+            var (books, totalRecords) = await _bookRepository.GetAllAsync(
+                request.PageNumber,
+                request.PageSize,
+                request.SearchTerm,
+                request.InStock,
+                request.MinPrice,
+                request.MaxPrice,
+                cancellationToken);
 
             var items = books.Select(x => new BookDto
             {

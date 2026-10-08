@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/forgot-password")({
 });
 
 function ForgotPasswordPage() {
+  const navigate = useNavigate();
   const [step, setStep] = useState<"email" | "reset">("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -54,7 +55,7 @@ function ForgotPasswordPage() {
     try {
       const result = await resetPasswordWithOtp(email, otp, newPassword);
       setInfo(typeof result === "string" ? result : "Password has been reset.");
-      window.setTimeout(() => window.location.assign("/login"), 800);
+      await navigate({ to: "/login" });
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to reset the password.");
     } finally {

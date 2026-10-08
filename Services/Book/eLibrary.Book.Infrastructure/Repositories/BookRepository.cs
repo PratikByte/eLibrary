@@ -37,11 +37,45 @@ public class BookRepository : IBookRepository
         return true;
     }
 
-    public async Task<(List<bookEntity> Books, int TotalRecords)> GetAllAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<(List<bookEntity> Books, int TotalRecords)> GetAllAsync(
+        int pageNumber,
+        int pageSize,
+        string? searchTerm,
+        bool? inStock,
+        float? minPrice,
+        float? maxPrice,
+        CancellationToken cancellationToken)
     {
-        var totalRecords = await _context.Books.CountAsync(cancellationToken);
+        var query = _context.Books.AsQueryable();
 
-        var books = await _context.Books
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.Trim().ToLower();
+            query = query.Where(book =>
+                (book.Title != null && book.Title.ToLower().Contains(term)) ||
+                (book.Author != null && book.Author.ToLower().Contains(term)));
+        }
+
+        if (inStock.HasValue)
+        {
+            query = inStock.Value
+                ? query.Where(book => book.AvailableCount > 0)
+                : query.Where(book => book.AvailableCount <= 0);
+        }
+
+        if (minPrice.HasValue)
+        {
+            query = query.Where(book => book.Price >= minPrice.Value);
+        }
+
+        if (maxPrice.HasValue)
+        {
+            query = query.Where(book => book.Price <= maxPrice.Value);
+        }
+
+        var totalRecords = await query.CountAsync(cancellationToken);
+
+        var books = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);

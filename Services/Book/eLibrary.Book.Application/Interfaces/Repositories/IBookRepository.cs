@@ -8,7 +8,14 @@ namespace eLibrary.Book.Application.Interfaces.Repositories;
 /// </summary>
 public interface IBookRepository
 {
-    Task<(List<BookEntity> Books, int TotalRecords)> GetAllAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<(List<BookEntity> Books, int TotalRecords)> GetAllAsync(
+        int pageNumber,
+        int pageSize,
+        string? searchTerm,
+        bool? inStock,
+        float? minPrice,
+        float? maxPrice,
+        CancellationToken cancellationToken);
     Task<(List<BookEntity> Books, int TotalRecords)> GetAvailBookAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<(List<BookEntity> Books, int TotalRecords)> PagedGetBookByAuthorAsync(int pageNumber, int pageSize, string author, CancellationToken cancellationToken);
     Task<BookEntity?> GetBookByIdAsync(Guid id, CancellationToken cancellationToken);

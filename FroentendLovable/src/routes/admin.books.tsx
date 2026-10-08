@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Pencil, Trash2, Library, Eye } from "lucide-react";
+import { Download, Plus, Pencil, Trash2, Library, Eye } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { BookDetailsDialog, type BookDialogMode } from "@/components/BookDetailsDialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -35,13 +35,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Book } from "@/lib/placeholder-data";
+import { exportToExcel } from "@/lib/export-excel";
 import {
   addBook,
   DEFAULT_PAGE_SIZE,
   deleteBook,
   deleteBookCover,
-  getBooksByAuthor,
-  getBooksByPriceRange,
   getBooksPaged,
   mapBookDto,
   updateBookCover,
@@ -68,7 +67,8 @@ function AdminBooksPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [author, setAuthor] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [availability, setAvailability] = useState("all");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -78,53 +78,47 @@ function AdminBooksPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const booksRequestId = useRef(0);
 
   const loadBooks = useCallback(
     async (
       pageNumber = 1,
-      nextAuthor = author,
+      nextSearchTerm = searchTerm,
+      nextAvailability = availability,
       nextMin = minPrice,
       nextMax = maxPrice,
     ) => {
+      const requestId = ++booksRequestId.current;
       setError(null);
       try {
-        const trimmedAuthor = nextAuthor.trim();
         const min = Number(nextMin);
         const max = Number(nextMax);
-        const hasPriceRange =
-          nextMin !== "" && nextMax !== "" && !Number.isNaN(min) && !Number.isNaN(max);
-
-        if (trimmedAuthor) {
-          const response = await getBooksByAuthor(trimmedAuthor, pageNumber, DEFAULT_PAGE_SIZE);
-          setBooks(response.items.map(mapBookDto));
-          setPage(response.pageNumber || pageNumber);
-          setTotalPages(response.totalPages || 1);
-          setTotalRecords(response.totalRecords || response.items.length);
-        } else if (hasPriceRange) {
-          const data = await getBooksByPriceRange(min, max);
-          setBooks(data.map(mapBookDto));
-          setPage(1);
-          setTotalPages(1);
-          setTotalRecords(data.length);
-        } else {
-          const response = await getBooksPaged(pageNumber, DEFAULT_PAGE_SIZE);
-          setBooks(response.items.map(mapBookDto));
-          setPage(response.pageNumber || pageNumber);
-          setTotalPages(response.totalPages || 1);
-          setTotalRecords(response.totalRecords || response.items.length);
-        }
+        const response = await getBooksPaged(
+          pageNumber,
+          DEFAULT_PAGE_SIZE,
+          nextSearchTerm,
+          nextAvailability === "all" ? undefined : nextAvailability === "available",
+          nextMin === "" || Number.isNaN(min) ? undefined : min,
+          nextMax === "" || Number.isNaN(max) ? undefined : max,
+        );
+        if (requestId !== booksRequestId.current) return;
+        setBooks(response.items.map(mapBookDto));
+        setPage(response.pageNumber || pageNumber);
+        setTotalPages(response.totalPages || 1);
+        setTotalRecords(response.totalRecords);
       } catch (requestError) {
+        if (requestId !== booksRequestId.current) return;
         setError(requestError instanceof Error ? requestError.message : "Unable to load books.");
         setBooks([]);
       }
     },
-    [author, maxPrice, minPrice],
+    [availability, maxPrice, minPrice, searchTerm],
   );
 
   useEffect(() => {
-    void loadBooks(1, "", "", "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const timeoutId = window.setTimeout(() => void loadBooks(1), 250);
+    return () => window.clearTimeout(timeoutId);
+  }, [loadBooks]);
 
   const openDialog = (book: Book, mode: BookDialogMode) => {
     setSelectedBook(book);
@@ -145,28 +139,65 @@ function AdminBooksPage() {
     }
   };
 
+  const handleExport = async () => {
+    setError(null);
+    try {
+      const min = Number(minPrice);
+      const max = Number(maxPrice);
+      const exportBooks: Book[] = [];
+      const firstPage = await getBooksPaged(
+        1,
+        100,
+        searchTerm,
+        availability === "all" ? undefined : availability === "available",
+        minPrice === "" || Number.isNaN(min) ? undefined : min,
+        maxPrice === "" || Number.isNaN(max) ? undefined : max,
+      );
+      exportBooks.push(...firstPage.items.map(mapBookDto));
+      for (let nextPage = 2; nextPage <= firstPage.totalPages; nextPage += 1) {
+        const response = await getBooksPaged(
+          nextPage,
+          100,
+          searchTerm,
+          availability === "all" ? undefined : availability === "available",
+          minPrice === "" || Number.isNaN(min) ? undefined : min,
+          maxPrice === "" || Number.isNaN(max) ? undefined : max,
+        );
+        exportBooks.push(...response.items.map(mapBookDto));
+      }
+
+      exportToExcel(
+        exportBooks.map((book) => ({
+          ID: book.id,
+          Title: book.title,
+          Author: book.author,
+          Price: book.price ?? "",
+          "Available copies": book.available,
+        })),
+        "elibrary-books",
+        "Books",
+      );
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to export books.");
+    }
+  };
+
   return (
-    <AdminLayout title="Books" subtitle="Manage the library inventory" searchPlaceholder="Search books…">
+    <AdminLayout title="Books" subtitle="Manage the library inventory">
       <FilterBar
-        searchPlaceholder="Search by title, author or ISBN…"
-        onApply={() => void loadBooks(1)}
+        inline
+        searchPlaceholder="Search by title or author…"
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
         onClear={() => {
-          setAuthor("");
+          setSearchTerm("");
+          setAvailability("all");
           setMinPrice("");
           setMaxPrice("");
-          void loadBooks(1, "", "", "");
         }}
       >
-        <FilterField label="Author" htmlFor="book-author">
-          <Input
-            id="book-author"
-            placeholder="Any author"
-            value={author}
-            onChange={(event) => setAuthor(event.target.value)}
-          />
-        </FilterField>
         <FilterField label="Availability">
-          <Select defaultValue="all">
+          <Select value={availability} onValueChange={setAvailability}>
             <SelectTrigger aria-label="Availability">
               <SelectValue />
             </SelectTrigger>
@@ -181,6 +212,8 @@ function AdminBooksPage() {
           <Input
             id="book-min"
             placeholder="Min"
+            type="number"
+            min="0"
             value={minPrice}
             onChange={(event) => setMinPrice(event.target.value)}
           />
@@ -189,6 +222,8 @@ function AdminBooksPage() {
           <Input
             id="book-max"
             placeholder="Max"
+            type="number"
+            min="0"
             value={maxPrice}
             onChange={(event) => setMaxPrice(event.target.value)}
           />
@@ -202,9 +237,14 @@ function AdminBooksPage() {
         title="All books"
         description={`${totalRecords} titles in the catalog`}
         action={
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <Plus className="h-4 w-4" /> Add book
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Plus className="h-4 w-4" /> Add book
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => void handleExport()}>
+              <Download className="h-4 w-4" /> Export
+            </Button>
+          </div>
         }
       >
         <div className="overflow-x-auto">

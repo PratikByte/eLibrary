@@ -53,4 +53,3 @@ public class GetUserHandler : IRequestHandler<GetUserQuery, PagedResponse<UserDt
         }
     }
 }
-
