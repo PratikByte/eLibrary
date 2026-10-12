@@ -10,19 +10,25 @@ namespace eLibrary.Identity.Infrastructure.Services;
 
 public class TokenService : ITokenService
 {
-    private readonly IConfiguration _configuration;
+    private readonly string _issuer;
+    private readonly string _audience;
+    private readonly string _key;
+    private readonly int _expiryMinutes;
+    private readonly int _passwordResetExpiryMinutes;
 
     public TokenService(IConfiguration configuration)
     {
-        _configuration = configuration;
+        var jwtSettings = configuration.GetSection("JwtSettings");
+
+        _issuer = GetRequiredSetting(jwtSettings, "Issuer");
+        _audience = GetRequiredSetting(jwtSettings, "Audience");
+        _key = GetRequiredSetting(jwtSettings, "Key");
+        _expiryMinutes = GetRequiredPositiveInt(jwtSettings, "ExpiryMinutes");
+        _passwordResetExpiryMinutes = GetRequiredPositiveInt(jwtSettings, "PasswordResetExpiryMinutes");
     }
 
     public string GenerateToken(User user)
     {
-        var issuer = _configuration["JwtSettings:Issuer"] ?? "eLibrary";
-        var audience = _configuration["JwtSettings:Audience"] ?? "eLibraryUsers";
-        var keyString = _configuration["JwtSettings:Key"] ?? "VeryStrongKey1234567890VeryStrongKey";
-
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -32,14 +38,14 @@ public class TokenService : ITokenService
             new Claim(ClaimTypes.Name, user.Username)
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_key));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
+            issuer: _issuer,
+            audience: _audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(10),
+            expires: DateTime.UtcNow.AddMinutes(_expiryMinutes),
             signingCredentials: creds
         );
 
@@ -48,24 +54,20 @@ public class TokenService : ITokenService
 
     public string GeneratePasswordResetToken(Guid userId)
     {
-        var issuer = _configuration["JwtSettings:Issuer"] ?? "eLibrary";
-        var audience = _configuration["JwtSettings:Audience"] ?? "eLibraryUsers";
-        var keyString = _configuration["JwtSettings:Key"] ?? "VeryStrongKey1234567890VeryStrongKey";
-
         var claims = new[]
         {
             new Claim("userId", userId.ToString()),
             new Claim("purpose", "password_reset")
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_key));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
+            issuer: _issuer,
+            audience: _audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(15),
+            expires: DateTime.UtcNow.AddMinutes(_passwordResetExpiryMinutes),
             signingCredentials: creds
         );
 
@@ -76,18 +78,14 @@ public class TokenService : ITokenService
     {
         try
         {
-            var keyString = _configuration["JwtSettings:Key"] ?? "VeryStrongKey1234567890VeryStrongKey";
-            var issuer = _configuration["JwtSettings:Issuer"] ?? "eLibrary";
-            var audience = _configuration["JwtSettings:Audience"] ?? "eLibraryUsers";
-
             var principal = new JwtSecurityTokenHandler().ValidateToken(token, new TokenValidationParameters
             {
                 ValidateIssuer = true,
                 ValidateAudience = true,
-                ValidIssuer = issuer,
-                ValidAudience = audience,
+                ValidIssuer = _issuer,
+                ValidAudience = _audience,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_key)),
                 ClockSkew = TimeSpan.Zero
             }, out _);
 
@@ -100,5 +98,22 @@ public class TokenService : ITokenService
         {
             return null;
         }
+    }
+
+    private static string GetRequiredSetting(IConfigurationSection settings, string name)
+    {
+        return settings[name] is { Length: > 0 } value
+            ? value
+            : throw new InvalidOperationException($"JwtSettings:{name} is not configured.");
+    }
+
+    private static int GetRequiredPositiveInt(IConfigurationSection settings, string name)
+    {
+        if (!int.TryParse(settings[name], out var value) || value <= 0)
+        {
+            throw new InvalidOperationException($"JwtSettings:{name} must be a positive integer.");
+        }
+
+        return value;
     }
 }

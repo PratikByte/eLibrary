@@ -27,11 +27,11 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, string
         // Same rule as the current app: user must exist and OTP must be valid.
         var user = await _userRepository.GetByEmailAsync(request.Email);
         if (user == null)
-            return "User with this email does not exist";
+            throw new KeyNotFoundException("No account was found with that email address.");
 
         var isValidOtp = await _otpService.ValidateOtpAsync(request.Email, request.Otp);
         if (!isValidOtp)
-            return "Invalid or expired OTP";
+            throw new InvalidOperationException("Invalid or expired OTP.");
 
         user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
         await _userRepository.UpdateAsync(user);

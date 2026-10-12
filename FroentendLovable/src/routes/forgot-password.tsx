@@ -3,8 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthCard } from "@/components/AuthCard";
-import { requestPasswordOtp, resetPasswordWithOtp } from "@/lib/api";
+import {
+  sanitizeSixDigitCode,
+  validatePassword,
+  validateSixDigitCode,
+} from "@/lib/auth-validation";
+import { requestPasswordOtp, resetPasswordWithOtp, verifyPasswordOtp } from "@/lib/api";
+import { Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
@@ -23,25 +30,44 @@ export const Route = createFileRoute("/forgot-password")({
 
 function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<"email" | "reset">("email");
+  const [step, setStep] = useState<"email" | "otp" | "password">("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSendCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
     setInfo(null);
     setIsSubmitting(true);
     try {
       const result = await requestPasswordOtp(email);
-      setInfo(typeof result === "string" ? result : "If the email exists, a code was sent.");
-      setStep("reset");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to send a reset code.");
+      setInfo(typeof result === "string" ? result : "A security code has been sent to your email.");
+      setStep("otp");
+    } catch {
+      // requestPasswordOtp displays request failures with the API toast.
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (validateSixDigitCode(otp)) {
+      toast.error("Enter correct One-time code get on email");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await verifyPasswordOtp(email, otp);
+      setStep("password");
+    } catch {
+      // verifyPasswordOtp displays the failure with the API toast.
     } finally {
       setIsSubmitting(false);
     }
@@ -49,15 +75,19 @@ function ForgotPasswordPage() {
 
   async function handleReset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
     setInfo(null);
+
+    const passwordValidationError = validatePassword(newPassword);
+    setPasswordError(passwordValidationError);
+    if (passwordValidationError) return;
+
     setIsSubmitting(true);
     try {
       const result = await resetPasswordWithOtp(email, otp, newPassword);
       setInfo(typeof result === "string" ? result : "Password has been reset.");
       await navigate({ to: "/login" });
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to reset the password.");
+    } catch {
+      // resetPasswordWithOtp displays request failures with the API toast.
     } finally {
       setIsSubmitting(false);
     }
@@ -79,37 +109,73 @@ function ForgotPasswordPage() {
               required
             />
           </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
           {info ? <p className="text-sm text-muted-foreground">{info}</p> : null}
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? "Sending..." : "Send code"}
           </Button>
         </form>
-      ) : (
-        <form className="space-y-4" onSubmit={handleReset}>
+      ) : step === "otp" ? (
+        <form className="space-y-4" onSubmit={handleVerifyCode}>
           <div className="space-y-2">
             <Label htmlFor="otp">One-time code</Label>
             <Input
               id="otp"
               name="otp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
               value={otp}
-              onChange={(event) => setOtp(event.target.value)}
-              required
+              onChange={(event) => {
+                const enteredValue = event.target.value;
+                const numericValue = sanitizeSixDigitCode(enteredValue);
+                setOtp(numericValue);
+              }}
             />
           </div>
+          {info ? <p className="text-sm text-muted-foreground">{info}</p> : null}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Verifying..." : "Verify code"}
+          </Button>
+        </form>
+      ) : (
+        <form className="space-y-4" onSubmit={handleReset}>
           <div className="space-y-2">
             <Label htmlFor="new-password">New password</Label>
-            <Input
-              id="new-password"
-              name="newPassword"
-              type="password"
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              required
-            />
+            <div className="relative">
+              <Input
+                id="new-password"
+                name="newPassword"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                className="pr-10"
+                value={newPassword}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setNewPassword(value);
+                  setPasswordError(validatePassword(value));
+                }}
+                required
+                aria-invalid={Boolean(passwordError)}
+                aria-describedby={passwordError ? "reset-password-error" : undefined}
+              />
+              {newPassword ? (
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 z-10 flex w-10 items-center justify-center text-foreground opacity-100 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              ) : null}
+            </div>
+            {passwordError ? (
+              <p id="reset-password-error" className="text-sm text-destructive">
+                {passwordError}
+              </p>
+            ) : null}
           </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
           {info ? <p className="text-sm text-muted-foreground">{info}</p> : null}
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? "Resetting..." : "Reset password"}

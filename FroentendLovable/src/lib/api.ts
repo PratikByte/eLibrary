@@ -13,6 +13,24 @@ export interface AuthSession {
 export const AUTH_SESSION_KEY = "eLibrary.session";
 export const DEFAULT_PAGE_SIZE = 5;
 
+function isJwtExpired(token: string): boolean {
+  const payload = token.split(".")[1];
+  if (!payload) return true;
+
+  try {
+    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const paddedPayload = normalizedPayload.padEnd(
+      Math.ceil(normalizedPayload.length / 4) * 4,
+      "=",
+    );
+    const bytes = Uint8Array.from(atob(paddedPayload), (character) => character.charCodeAt(0));
+    const claims = JSON.parse(new TextDecoder().decode(bytes)) as { exp?: unknown };
+    return typeof claims.exp !== "number" || claims.exp <= Date.now() / 1000;
+  } catch {
+    return true;
+  }
+}
+
 export type ApiResponse<T> = {
   success: boolean;
   message?: string | null;
@@ -84,7 +102,8 @@ export function getAuthSession(): AuthSession | null {
       typeof session.userId !== "string" ||
       !session.userId ||
       typeof session.token !== "string" ||
-      !session.token
+      !session.token ||
+      isJwtExpired(session.token)
     ) {
       clearAuthSession();
       return null;
@@ -338,7 +357,17 @@ export async function requestPasswordOtp(email: string) {
       method: "POST",
       body: { email },
     }),
-    "If the email exists, a reset code was sent.",
+    "A security code has been sent to your email.",
+  );
+}
+
+export async function verifyPasswordOtp(email: string, otp: string) {
+  return withApiToast(
+    apiRequest<unknown>("/api/Auth/verify-reset-otp", {
+      method: "POST",
+      body: { email, otp },
+    }),
+    "One-time code verified.",
   );
 }
 
@@ -525,14 +554,17 @@ function normalizeUserProfileResponse(
   if (userId === undefined || userId === null || userId.length === 0) {
     throw new Error("User profile response is missing its ID.");
   }
+  const profileImageUrl = profile.profileImageUrl;
   return {
     ...profile,
     userId: String(userId),
-    profileImageUrl: profile.profileImageUrl?.startsWith("http")
-      ? profile.profileImageUrl
-      : profile.profileImageUrl
-        ? `${API_BASE_URL}${profile.profileImageUrl}`
-        : profile.profileImageUrl,
+    ...(profileImageUrl !== undefined && {
+      profileImageUrl: profileImageUrl?.startsWith("http")
+        ? profileImageUrl
+        : profileImageUrl
+          ? `${API_BASE_URL}${profileImageUrl}`
+          : profileImageUrl,
+    }),
   };
 }
 

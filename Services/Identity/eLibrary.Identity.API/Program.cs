@@ -68,6 +68,8 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Regis
 // 5) JWT settings for token validation
 var jwtSettingsSection = builder.Configuration.GetSection("JwtSettings");
 var jwtKey = jwtSettingsSection["Key"] ?? throw new InvalidOperationException("JWT Key is not configured.");
+var jwtIssuer = jwtSettingsSection["Issuer"] ?? throw new InvalidOperationException("JWT Issuer is not configured.");
+var jwtAudience = jwtSettingsSection["Audience"] ?? throw new InvalidOperationException("JWT Audience is not configured.");
 var key = Encoding.UTF8.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
@@ -86,8 +88,8 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettingsSection["Issuer"],
-        ValidAudience = jwtSettingsSection["Audience"],
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(key)
     };
 });

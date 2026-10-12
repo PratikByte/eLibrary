@@ -1,5 +1,6 @@
 ﻿using eLibrary.Application.Commands.Auth;
 using eLibrary.Application.DTOs;
+using eLibrary.Common;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,6 +20,10 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterUserDto request)
     {
+        var passwordError = AuthInputValidator.ValidatePassword(request.Password);
+        if (passwordError is not null)
+            return BadRequest(new { message = passwordError });
+
         // Send command to CQRS handler
         var result = await _mediator.Send(new RegisterUserCommand(request));
 
@@ -38,6 +43,10 @@ public class AuthController : ControllerBase
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
+
+        var passwordError = AuthInputValidator.ValidatePassword(loginDto.Password);
+        if (passwordError is not null)
+            return BadRequest(new { message = passwordError });
 
         try
         {
@@ -63,6 +72,10 @@ public class AuthController : ControllerBase
     [HttpPost("reset-password-jwt")]
     public async Task<IActionResult> ResetPasswordJWT([FromBody] ResetPasswordCommandJWT command)
     {
+       var passwordError = AuthInputValidator.ValidatePassword(command.NewPassword);
+       if (passwordError is not null)
+           return BadRequest(new { message = passwordError });
+
        var result = await _mediator.Send(command);
        
        return Ok(new { Message = result });
@@ -74,17 +87,60 @@ public class AuthController : ControllerBase
     [HttpPost("forget-password")]
     public async Task<IActionResult> ForgetPassword([FromBody] ForgotPasswordCommand command)
     {
-        var result = await _mediator.Send(command);
-        return Ok(result); // For backend demo
+        try
+        {
+            var result = await _mediator.Send(command);
+            return Ok(new { message = result });
+        }
+        catch (KeyNotFoundException exception)
+        {
+            return NotFound(new { message = exception.Message });
+        }
+    }
+
+    [HttpPost("verify-reset-otp")]
+    public async Task<IActionResult> VerifyPasswordOtp([FromBody] VerifyPasswordOtpCommand command)
+    {
+        if (!AuthInputValidator.IsValidSixDigitCode(command.Otp))
+            return BadRequest(new { message = "Enter correct One-time code get on email" });
+
+        try
+        {
+            var isValid = await _mediator.Send(command);
+            if (!isValid)
+                return BadRequest(new { message = "Enter correct One-time code get on email" });
+
+            return Ok(new { message = "One-time code verified." });
+        }
+        catch (KeyNotFoundException exception)
+        {
+            return NotFound(new { message = exception.Message });
+        }
     }
 
     //reset password using OTP
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordCommand command)
     {
-        var result = await _mediator.Send(command);
+        var passwordError = AuthInputValidator.ValidatePassword(command.NewPassword);
+        if (passwordError is not null)
+            return BadRequest(new { message = passwordError });
+        if (!AuthInputValidator.IsValidSixDigitCode(command.Otp))
+            return BadRequest(new { message = "Code must be exactly 6 numeric digits." });
 
-        return Ok(result);
+        try
+        {
+            var result = await _mediator.Send(command);
+            return Ok(new { message = result });
+        }
+        catch (KeyNotFoundException exception)
+        {
+            return NotFound(new { message = exception.Message });
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
 
     }
 
@@ -93,4 +149,3 @@ public class AuthController : ControllerBase
 
 
 }
-

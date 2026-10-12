@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthCard } from "@/components/AuthCard";
+import { validatePassword } from "@/lib/auth-validation";
 import { registerUser } from "@/lib/api";
 import { Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
@@ -28,18 +29,24 @@ function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
+    const submittedPassword = String(formData.get("password") ?? "");
+    const validationError = validatePassword(submittedPassword);
+    setPasswordError(validationError);
+    if (validationError) return;
+
+    setIsSubmitting(true);
     try {
       await registerUser(
         String(formData.get("username") ?? ""),
         String(formData.get("email") ?? ""),
-        String(formData.get("password") ?? ""),
+        submittedPassword,
       );
       await navigate({ to: "/login" });
     } catch (requestError) {
@@ -70,7 +77,14 @@ function RegisterPage() {
               autoComplete="new-password"
               className="pr-10"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => {
+                const value = event.target.value;
+                setPassword(value);
+                setPasswordError(validatePassword(value));
+              }}
+              required
+              aria-invalid={Boolean(passwordError)}
+              aria-describedby={passwordError ? "register-password-error" : undefined}
             />
             {password ? (
               <button
@@ -84,6 +98,11 @@ function RegisterPage() {
               </button>
             ) : null}
           </div>
+          {passwordError ? (
+            <p id="register-password-error" className="text-sm text-destructive">
+              {passwordError}
+            </p>
+          ) : null}
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" className="w-full" disabled={isSubmitting}>

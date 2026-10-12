@@ -28,7 +28,7 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, stri
     {
         var user = await _userRepository.GetUserByEmail(request.Email);
         if (user == null)
-            return ("User with this email does not exist");
+            throw new KeyNotFoundException("No account was found with that email address.");
         var otp = await _otpService.GenerateOtpAsync(request.Email);
 
         //Email format 
@@ -38,4 +38,3 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, stri
         return "OTP sent to your email ";
     }
 }
-

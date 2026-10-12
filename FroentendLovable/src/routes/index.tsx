@@ -1,12 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BookMarked, Clock, Coins, Library, BookOpen, ArrowLeftRight, UserCircle } from "lucide-react";
 import { UserLayout } from "@/components/UserLayout";
 import { SectionCard } from "@/components/SectionCard";
 import { StatCard } from "@/components/StatCard";
+import { Loader } from "@/components/Loader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { sampleLoans } from "@/lib/placeholder-data";
-import { getAuthSession, getBooksPaged, mapBookDto } from "@/lib/api";
+import { getAuthSession, getBooksPaged, getUserProfile, mapBookDto } from "@/lib/api";
 import type { Book } from "@/lib/placeholder-data";
 import { useEffect, useState } from "react";
 
@@ -29,25 +30,65 @@ export const Route = createFileRoute("/")({
 });
 
 function UserDashboardPage() {
+  const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("reader");
+  const [hasVerifiedSession, setHasVerifiedSession] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const myLoans = sampleLoans.filter((loan) => loan.member === "Aarav Shah");
   const [recentBooks, setRecentBooks] = useState<Book[]>([]);
 
   useEffect(() => {
-    setDisplayName(getAuthSession()?.username ?? "reader");
+    const session = getAuthSession();
+    if (!session) {
+      void navigate({ to: "/login", replace: true });
+      return;
+    }
 
     let cancelled = false;
-    getBooksPaged(1, 3)
-      .then((response) => {
-        if (!cancelled) setRecentBooks(response.items.map(mapBookDto));
-      })
-      .catch(() => {
-        if (!cancelled) setRecentBooks([]);
-      });
+    async function verifySessionAndLoadBooks() {
+      try {
+        const profile = await getUserProfile(session.userId);
+        if (cancelled) return;
+
+        setDisplayName(profile.username);
+        setHasVerifiedSession(true);
+
+        try {
+          const response = await getBooksPaged(1, 3);
+          if (!cancelled) setRecentBooks(response.items.map(mapBookDto));
+        } catch {
+          if (!cancelled) setRecentBooks([]);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setSessionError(
+            requestError instanceof Error ? requestError.message : "Unable to verify your session.",
+          );
+        }
+      }
+    }
+
+    void verifySessionAndLoadBooks();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [navigate]);
+
+  if (!hasVerifiedSession) {
+    if (sessionError) {
+      return (
+        <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
+          <p className="text-sm text-destructive" role="alert">
+            Could not verify your session: {sessionError}
+          </p>
+          <Button asChild variant="outline">
+            <Link to="/login">Go to sign in</Link>
+          </Button>
+        </main>
+      );
+    }
+    return <Loader label="Checking your session..." />;
+  }
 
   return (
     <UserLayout title="Dashboard" subtitle={`Welcome back, ${displayName}`} searchPlaceholder="Search the catalog…">

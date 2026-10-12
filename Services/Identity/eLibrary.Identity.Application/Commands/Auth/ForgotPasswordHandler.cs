@@ -22,14 +22,13 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, stri
 
     public async Task<string> Handle(ForgotPasswordCommand request, CancellationToken cancellationToken)
     {
-        // Same as the current app: return a friendly message whether the email exists or not.
         var user = await _userRepository.GetByEmailAsync(request.Email);
         if (user == null)
-            return "If email exists, reset code has been sent.";
+            throw new KeyNotFoundException("No account was found with that email address.");
 
         var otp = await _otpService.GenerateOtpAsync(request.Email);
         await _emailService.SendEmailAsync(request.Email, "Password Reset OTP", $"Your OTP is: {otp}. It is valid for 5 minutes.");
 
-        return "If email exists, reset code has been sent.";
+        return "A security code has been sent to your email.";
     }
 }

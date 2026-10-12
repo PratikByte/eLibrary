@@ -16,4 +16,8 @@
   <ItemGroup>
     <ProjectReference Include="..\eLibrary.Identity.Domain\eLibrary.Identity.Domain.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\Common\AuthInputValidator.cs" Link="Common\AuthInputValidator.cs" />
+  </ItemGroup>
 </Project>

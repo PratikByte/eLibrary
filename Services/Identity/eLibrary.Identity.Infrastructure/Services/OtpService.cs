@@ -2,6 +2,8 @@ using eLibrary.Identity.Application.Interfaces.Services;
 using eLibrary.Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using eLibrary.Identity.Infrastructure.Persistence;
+using eLibrary.Common;
+using System.Security.Cryptography;
 
 namespace eLibrary.Identity.Infrastructure.Services;
 
@@ -16,7 +18,7 @@ public class OtpService : IOtpService
 
     public async Task<string> GenerateOtpAsync(string email)
     {
-        var otp = new Random().Next(100000, 999999).ToString();
+        var otp = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
         var record = await _context.OtpRecords.FirstOrDefaultAsync(r => r.Email == email);
 
         if (record == null)
@@ -40,6 +42,9 @@ public class OtpService : IOtpService
 
     public async Task<bool> ValidateOtpAsync(string email, string code)
     {
+        if (!AuthInputValidator.IsValidSixDigitCode(code))
+            return false;
+
         var record = await _context.OtpRecords.FirstOrDefaultAsync(r => r.Email == email && r.Code == code);
         if (record == null || record.ExpiryTime < DateTime.UtcNow)
             return false;
@@ -47,5 +52,14 @@ public class OtpService : IOtpService
         _context.OtpRecords.Remove(record);
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<bool> IsOtpValidAsync(string email, string code)
+    {
+        if (!AuthInputValidator.IsValidSixDigitCode(code))
+            return false;
+
+        return await _context.OtpRecords.AnyAsync(r =>
+            r.Email == email && r.Code == code && r.ExpiryTime >= DateTime.UtcNow);
     }
 }
