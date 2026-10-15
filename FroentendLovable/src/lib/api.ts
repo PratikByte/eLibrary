@@ -58,7 +58,7 @@ export type DataPagedResponse<T> = ApiResponse<T[]> & {
 };
 
 export type BookDto = {
-  id: number;
+  id: string;
   title: string;
   author: string;
   availableCount: number;
@@ -80,16 +80,27 @@ export type UserProfileResponseDto = UserDto & {
 };
 
 export type BorrowRecordDto = {
-  id: number;
+  id: string;
   userId: string;
   userName?: string | null;
-  bookId: number;
+  bookId: string;
   bookName?: string | null;
   borrowDate: string;
   dueDate: string;
   returnDate?: string | null;
   isReturned: boolean;
   fine?: number | null;
+};
+
+export type ActiveBorrowRecordDto = {
+  id: string;
+  userId: string;
+  userName: string;
+  bookId: string;
+  bookName: string;
+  borrowDate: string;
+  dueDate: string;
+  isOverdue: boolean;
 };
 
 export function getAuthSession(): AuthSession | null {
@@ -400,7 +411,7 @@ export async function getBooksPaged(
   return apiRequest<PagedResponse<BookDto>>(`/api/Book/paged?${query.toString()}`);
 }
 
-export async function getBookById(bookId: number) {
+export async function getBookById(bookId: string | number) {
   const response = await apiRequest<ApiResponse<BookDto>>(`/api/Book/${bookId}`);
   return unwrapApi(response);
 }
@@ -450,7 +461,7 @@ export async function addBook(input: {
   );
 }
 
-export async function updateBookPrice(bookId: number, newPrice: number) {
+export async function updateBookPrice(bookId: string | number, newPrice: number) {
   return withApiToast(
     apiRequest<ApiResponse<BookDto>>("/api/Book/update-price", {
       method: "PUT",
@@ -461,7 +472,7 @@ export async function updateBookPrice(bookId: number, newPrice: number) {
   );
 }
 
-export async function updateBookCover(bookId: number, coverImage: File) {
+export async function updateBookCover(bookId: string | number, coverImage: File) {
   const form = new FormData();
   form.append("coverImage", coverImage);
   return withApiToast(
@@ -474,7 +485,7 @@ export async function updateBookCover(bookId: number, coverImage: File) {
   );
 }
 
-export async function deleteBookCover(bookId: number) {
+export async function deleteBookCover(bookId: string | number) {
   return withApiToast(
     apiRequest<ApiResponse<boolean>>(`/api/Book/${bookId}/cover`, {
       method: "DELETE",
@@ -484,7 +495,7 @@ export async function deleteBookCover(bookId: number) {
   );
 }
 
-export async function deleteBook(bookId: number) {
+export async function deleteBook(bookId: string | number) {
   return withApiToast(
     apiRequest<ApiResponse<boolean>>(`/api/Book/${bookId}`, {
       method: "DELETE",
@@ -494,7 +505,7 @@ export async function deleteBook(bookId: number) {
   );
 }
 
-export async function borrowBook(userId: string, bookId: number) {
+export async function borrowBook(userId: string, bookId: string | number) {
   return withApiToast(
     apiRequest<ApiResponse<BorrowRecordDto>>("/api/BorrowReturnBook/borrow", {
       method: "POST",
@@ -505,11 +516,22 @@ export async function borrowBook(userId: string, bookId: number) {
   );
 }
 
-export async function returnBook(borrowId: number) {
+export async function getActiveBorrowRecords() {
+  const response = await apiRequest<ApiResponse<ActiveBorrowRecordDto[]>>(
+    "/api/BorrowReturnBook/active",
+  );
+  const records = unwrapApi(response);
+  if (!Array.isArray(records)) {
+    throw new Error("The active loans response is invalid.");
+  }
+  return records;
+}
+
+export async function returnBook(borrowId: string, returnDate: string) {
   return withApiToast(
     apiRequest<ApiResponse<BorrowRecordDto>>("/api/BorrowReturnBook/return", {
       method: "POST",
-      body: { borrowId },
+      body: { borrowId, returnDate },
     }),
     "Book returned successfully.",
     unwrapApi,

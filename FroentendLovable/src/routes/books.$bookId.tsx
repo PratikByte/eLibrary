@@ -30,7 +30,7 @@ function BookDetailsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    getBookById(Number(bookId))
+    getBookById(bookId)
       .then((dto) => {
         if (!cancelled) setBook(mapBookDto(dto));
       })

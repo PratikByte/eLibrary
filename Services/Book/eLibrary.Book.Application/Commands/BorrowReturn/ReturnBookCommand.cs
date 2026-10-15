@@ -5,7 +5,12 @@ using MediatR;
 
 namespace eLibrary.Book.Application.Commands.BorrowReturn;
 
-public record ReturnBookCommand(Guid BorrowId, Guid? CurrentUserId = null, bool IsAdmin = false, string? UserName = null)
+public record ReturnBookCommand(
+    Guid BorrowId,
+    DateOnly? ReturnDate = null,
+    Guid? CurrentUserId = null,
+    bool IsAdmin = false,
+    string? UserName = null)
     : IRequest<ApiResponse<BorrowRecordDto>>;
 
 public class ReturnBookCommandHandler : IRequestHandler<ReturnBookCommand, ApiResponse<BorrowRecordDto>>
@@ -31,18 +36,37 @@ public class ReturnBookCommandHandler : IRequestHandler<ReturnBookCommand, ApiRe
         if (record.IsReturned)
             return ApiResponse<BorrowRecordDto>.Fail("This book has already been returned.");
 
+        if (!request.ReturnDate.HasValue)
+            return ApiResponse<BorrowRecordDto>.Fail("A return date is required.");
+
+        var returnDateOnly = request.ReturnDate.Value;
+        if (returnDateOnly > DateOnly.FromDateTime(DateTime.UtcNow))
+            return ApiResponse<BorrowRecordDto>.Fail("The return date cannot be in the future.");
+
+        if (returnDateOnly < DateOnly.FromDateTime(record.BorrowDate))
+            return ApiResponse<BorrowRecordDto>.Fail("The return date cannot be before the borrow date.");
+
         var book = await _bookRepository.GetBookByIdAsync(record.BookId, cancellationToken);
         if (book is null)
             return ApiResponse<BorrowRecordDto>.Fail("Book return failed because the book could not be found.");
 
-        record.IsReturned = true;
-        record.ReturnDate = DateTime.UtcNow;
-        if (record.ReturnDate > record.DueDate)
-            record.Fine = (record.ReturnDate.Value - record.DueDate).Days * 10;
+        var returnDate = returnDateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var overdueDays = returnDateOnly.DayNumber - DateOnly.FromDateTime(record.DueDate).DayNumber;
+        var fine = overdueDays > 0
+            ? overdueDays * 10m
+            : (decimal?)null;
+        var returned = await _borrowRepository.TryReturnAsync(
+            record.Id,
+            book.Id,
+            returnDate,
+            fine,
+            cancellationToken);
+        if (!returned)
+            return ApiResponse<BorrowRecordDto>.Fail("This book has already been returned.");
 
-        book.AvailableCount++;
-        _borrowRepository.Update(record);
-        await _borrowRepository.SaveChangesAsync(cancellationToken);
+        record.IsReturned = true;
+        record.ReturnDate = returnDate;
+        record.Fine = fine;
 
         var dto = BorrowBookCommandHandler.Map(record, request.UserName ?? "User", book.Title ?? "Unknown Book");
         var message = dto.Fine is > 0

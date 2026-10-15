@@ -54,7 +54,7 @@ function CatalogPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [borrowingId, setBorrowingId] = useState<number | null>(null);
+  const [borrowingId, setBorrowingId] = useState<string | number | null>(null);
 
   const loadBooks = useCallback(
     async (

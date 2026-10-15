@@ -5,7 +5,7 @@
  */
 
 export type Book = {
-  id: number;
+  id: string | number;
   title: string;
   author: string;
   /** Present on dummy data and the price-range API; omitted by other book endpoints. */

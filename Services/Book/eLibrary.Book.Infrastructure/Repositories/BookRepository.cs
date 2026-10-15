@@ -51,9 +51,11 @@ public class BookRepository : IBookRepository
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             var term = searchTerm.Trim().ToLower();
+            var hasId = Guid.TryParse(searchTerm.Trim(), out var bookId);
             query = query.Where(book =>
                 (book.Title != null && book.Title.ToLower().Contains(term)) ||
-                (book.Author != null && book.Author.ToLower().Contains(term)));
+                (book.Author != null && book.Author.ToLower().Contains(term)) ||
+                (hasId && book.Id == bookId));
         }
 
         if (inStock.HasValue)

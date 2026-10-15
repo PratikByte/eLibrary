@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using eLibrary.Book.Application.Commands.BorrowReturn;
+using eLibrary.Book.Application.Queries.BorrowReturn;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,29 @@ public class BorrowReturnBookController : ControllerBase
     public BorrowReturnBookController(IMediator mediator)
     {
         _mediator = mediator;
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("active")]
+    public async Task<IActionResult> GetActiveBorrowRecords(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetActiveBorrowRecordsQuery(), cancellationToken);
+        return Ok(result);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("transactions")]
+    public async Task<IActionResult> GetRecentTransactions(
+        [FromQuery] int count = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (count is < 1 or > 100)
+            return BadRequest(new { message = "Count must be between 1 and 100." });
+
+        var result = await _mediator.Send(
+            new GetRecentBorrowTransactionsQuery(count),
+            cancellationToken);
+        return Ok(result);
     }
 
     [HttpPost("borrow")]

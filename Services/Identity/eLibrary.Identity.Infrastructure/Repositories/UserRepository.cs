@@ -23,6 +23,13 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByIdAsync(Guid id)
         => await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
 
+    public async Task<IReadOnlyList<User>> GetByIdsAsync(IReadOnlyCollection<Guid> ids)
+        => await _context.Users
+            .AsNoTracking()
+            .Where(user => ids.Contains(user.Id))
+            .Select(user => new User { Id = user.Id, Username = user.Username })
+            .ToListAsync();
+
     public async Task<(IReadOnlyList<User> Users, int TotalCount)> GetPagedAsync(
         int pageNumber,
         int pageSize,
@@ -34,9 +41,11 @@ public class UserRepository : IUserRepository
         var normalizedRole = role?.Trim();
         if (!string.IsNullOrEmpty(normalizedSearchTerm))
         {
+            var hasId = Guid.TryParse(searchTerm!.Trim(), out var userId);
             query = query.Where(user =>
                 user.Username.ToLower().Contains(normalizedSearchTerm) ||
-                user.Email.ToLower().Contains(normalizedSearchTerm));
+                user.Email.ToLower().Contains(normalizedSearchTerm) ||
+                (hasId && user.Id == userId));
         }
         if (!string.IsNullOrEmpty(normalizedRole))
         {

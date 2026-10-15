@@ -46,6 +46,21 @@ public class UserController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    [HttpGet("lookup")]
+    public async Task<IActionResult> LookupByIds([FromQuery] Guid[]? ids)
+    {
+        if (ids is null || ids.Length == 0 || ids.Length > 100)
+            return BadRequest(new { message = "Provide between 1 and 100 user IDs." });
+
+        var users = await _userRepository.GetByIdsAsync(ids.Distinct().ToArray());
+        return Ok(new
+        {
+            success = true,
+            data = users.Select(user => new { user.Id, user.Username })
+        });
+    }
+
+    [Authorize(Roles = "Admin")]
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] int pageNumber = 1,

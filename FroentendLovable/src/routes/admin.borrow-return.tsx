@@ -1,12 +1,19 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowLeftRight, Repeat } from "lucide-react";
+import { ArrowLeftRight, ChevronsUpDown, Repeat, X } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { SectionCard } from "@/components/SectionCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Command,
+  CommandEmpty,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Table,
   TableBody,
@@ -15,8 +22,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { sampleLoans } from "@/lib/placeholder-data";
-import { borrowBook, returnBook } from "@/lib/api";
+import { sampleLoans, type Member } from "@/lib/placeholder-data";
+import {
+  borrowBook,
+  getActiveBorrowRecords,
+  getBooksPaged,
+  getUsersPaged,
+  mapBookDto,
+  mapUserDto,
+  returnBook,
+} from "@/lib/api";
 
 export const Route = createFileRoute("/admin/borrow-return")({
   head: () => ({
@@ -33,9 +48,52 @@ export const Route = createFileRoute("/admin/borrow-return")({
   component: AdminBorrowReturnPage,
 });
 
+async function loadMemberOptions(searchTerm: string): Promise<PickerOption[]> {
+  const response = await getUsersPaged(1, 10, searchTerm, "User");
+  return (response.data ?? []).map((dto) => {
+    const member: Member = mapUserDto(dto);
+    return {
+      id: member.id,
+      label: member.name,
+    };
+  });
+}
+
+async function loadBookOptions(searchTerm: string): Promise<PickerOption[]> {
+  const response = await getBooksPaged(1, 10, searchTerm, true);
+  return response.items.map((dto) => {
+    const book = mapBookDto(dto);
+    return {
+      id: dto.id,
+      label: `${book.title} — ${book.author}`,
+    };
+  });
+}
+
+async function loadActiveLoanOptions(): Promise<PickerOption[]> {
+  const records = await getActiveBorrowRecords();
+  return records.map((record) => ({
+    id: record.id,
+    label: `${record.bookName} — ${record.userName} — due ${formatShortDate(record.dueDate)}${record.isOverdue ? " (overdue)" : ""}`,
+    minDate: record.borrowDate.slice(0, 10),
+  }));
+}
+
+function formatShortDate(value: string) {
+  const [year, month, day] = value.slice(0, 10).split("-");
+  return year && month && day ? `${day}-${month}-${year.slice(-2)}` : value;
+}
+
+function getUtcDateInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function AdminBorrowReturnPage() {
+  const today = getUtcDateInputValue();
+  const [selectedMember, setSelectedMember] = useState<PickerOption | null>(null);
+  const [selectedBook, setSelectedBook] = useState<PickerOption | null>(null);
+  const [selectedLoan, setSelectedLoan] = useState<PickerOption | null>(null);
   const [borrowError, setBorrowError] = useState<string | null>(null);
-  const [borrowInfo, setBorrowInfo] = useState<string | null>(null);
   const [returnError, setReturnError] = useState<string | null>(null);
   const [returnInfo, setReturnInfo] = useState<string | null>(null);
   const [isBorrowing, setIsBorrowing] = useState(false);
@@ -43,20 +101,13 @@ function AdminBorrowReturnPage() {
 
   async function handleBorrow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
+    if (!selectedMember || !selectedBook) return;
     setBorrowError(null);
-    setBorrowInfo(null);
     setIsBorrowing(true);
     try {
-      const record = await borrowBook(
-        Number(formData.get("userId")),
-        Number(formData.get("bookId")),
-      );
-      setBorrowInfo(
-        `Issued "${record.bookName ?? "book"}" to ${record.userName ?? "member"}. Due ${record.dueDate}.`,
-      );
-      form.reset();
+      await borrowBook(selectedMember.id, selectedBook.id);
+      setSelectedMember(null);
+      setSelectedBook(null);
     } catch (requestError) {
       setBorrowError(requestError instanceof Error ? requestError.message : "Unable to issue this book.");
     } finally {
@@ -72,11 +123,17 @@ function AdminBorrowReturnPage() {
     setReturnInfo(null);
     setIsReturning(true);
     try {
-      const record = await returnBook(Number(formData.get("borrowId")));
+      const borrowId = selectedLoan?.id;
+      const returnDate = String(formData.get("returnDate") ?? "");
+      if (!borrowId || !returnDate) {
+        throw new Error("Select an active loan and return date.");
+      }
+      const record = await returnBook(borrowId, returnDate);
       const fineText =
         record.fine && record.fine > 0 ? ` Fine ${record.fine}.` : "";
       setReturnInfo(`Returned "${record.bookName ?? "book"}".${fineText}`);
       form.reset();
+      setSelectedLoan(null);
     } catch (requestError) {
       setReturnError(requestError instanceof Error ? requestError.message : "Unable to record this return.");
     } finally {
@@ -90,16 +147,33 @@ function AdminBorrowReturnPage() {
         <SectionCard title="Issue a book" description="Loans run for 7 days from the borrow date">
           <form className="grid gap-4" onSubmit={handleBorrow}>
             <div className="grid gap-2">
-              <Label htmlFor="borrow-member">Member ID</Label>
-              <Input id="borrow-member" name="userId" placeholder="e.g. 1024" required />
+              <Label htmlFor="borrow-member">Member</Label>
+              <SearchablePicker
+                id="borrow-member"
+                placeholder="Select member"
+                selected={selectedMember}
+                onSelect={setSelectedMember}
+                onClear={() => setSelectedMember(null)}
+                loadOptions={loadMemberOptions}
+              />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="borrow-book">Book ID</Label>
-              <Input id="borrow-book" name="bookId" placeholder="e.g. 58" required />
+              <Label htmlFor="borrow-book">Book</Label>
+              <SearchablePicker
+                id="borrow-book"
+                placeholder="Select book"
+                selected={selectedBook}
+                onSelect={setSelectedBook}
+                onClear={() => setSelectedBook(null)}
+                loadOptions={loadBookOptions}
+              />
             </div>
             {borrowError ? <p className="text-sm text-destructive">{borrowError}</p> : null}
-            {borrowInfo ? <p className="text-sm text-muted-foreground">{borrowInfo}</p> : null}
-            <Button className="w-full" type="submit" disabled={isBorrowing}>
+            <Button
+              className="w-full"
+              type="submit"
+              disabled={isBorrowing || !selectedMember || !selectedBook}
+            >
               <ArrowLeftRight className="h-4 w-4" /> {isBorrowing ? "Issuing..." : "Issue book"}
             </Button>
           </form>
@@ -108,16 +182,37 @@ function AdminBorrowReturnPage() {
         <SectionCard title="Return a book" description="Late returns are fined per overdue day">
           <form className="grid gap-4" onSubmit={handleReturn}>
             <div className="grid gap-2">
-              <Label htmlFor="return-loan">Loan ID</Label>
-              <Input id="return-loan" name="borrowId" placeholder="e.g. 341" required />
+              <Label htmlFor="return-loan">Active borrowed book</Label>
+              <SearchablePicker
+                id="return-loan"
+                placeholder="Select active loan"
+                selected={selectedLoan}
+                onSelect={setSelectedLoan}
+                onClear={() => setSelectedLoan(null)}
+                loadOptions={loadActiveLoanOptions}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="return-date">Return date</Label>
-              <Input id="return-date" type="date" disabled />
+              <Input
+                id="return-date"
+                name="returnDate"
+                type="date"
+                defaultValue={today}
+                min={selectedLoan?.minDate}
+                max={today}
+                required
+                className="h-11 bg-background px-4 text-base"
+              />
             </div>
             {returnError ? <p className="text-sm text-destructive">{returnError}</p> : null}
             {returnInfo ? <p className="text-sm text-muted-foreground">{returnInfo}</p> : null}
-            <Button variant="outline" className="w-full" type="submit" disabled={isReturning}>
+            <Button
+              variant="outline"
+              className="w-full"
+              type="submit"
+              disabled={isReturning || !selectedLoan}
+            >
               <Repeat className="h-4 w-4" /> {isReturning ? "Recording..." : "Record return"}
             </Button>
           </form>
@@ -153,6 +248,126 @@ function AdminBorrowReturnPage() {
         </div>
       </SectionCard>
     </AdminLayout>
+  );
+}
+
+type PickerOption = {
+  id: string;
+  label: string;
+  minDate?: string;
+};
+
+function SearchablePicker({
+  id,
+  placeholder,
+  selected,
+  onSelect,
+  onClear,
+  loadOptions,
+}: {
+  id: string;
+  placeholder: string;
+  selected: PickerOption | null;
+  onSelect: (option: PickerOption) => void;
+  onClear: () => void;
+  loadOptions: (searchTerm: string) => Promise<PickerOption[]>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [options, setOptions] = useState<PickerOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setOptions([]);
+    setIsLoading(true);
+    setError(null);
+    const timeoutId = window.setTimeout(() => {
+      void loadOptions("")
+        .then((results) => {
+          if (!cancelled) setOptions(results);
+        })
+        .catch((requestError) => {
+          if (!cancelled) {
+            setOptions([]);
+            setError(
+              requestError instanceof Error ? requestError.message : "Unable to load options.",
+            );
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false);
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [loadOptions, open]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <div className="flex w-full">
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className={`h-11 min-w-0 flex-1 justify-between bg-background px-4 text-base font-normal shadow-sm ${selected ? "rounded-r-none" : ""}`}
+          >
+            <span className={selected ? "" : "text-muted-foreground"}>
+              {selected?.label ?? placeholder}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        {selected ? (
+          <Button
+            type="button"
+            variant="outline"
+            aria-label="Clear selection"
+            title="Clear selection"
+            className="h-11 rounded-l-none border-l-0 px-3"
+            onClick={onClear}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        ) : null}
+      </div>
+      <PopoverContent
+        align="start"
+        className="w-[var(--radix-popover-trigger-width)] rounded-lg p-0 shadow-md"
+      >
+        <Command shouldFilter={false}>
+          <CommandList>
+            {isLoading ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">Searching...</p>
+            ) : error ? (
+              <p className="px-4 py-6 text-center text-sm text-destructive">{error}</p>
+            ) : options.length === 0 ? (
+              <CommandEmpty>No matching records found.</CommandEmpty>
+            ) : (
+              options.map((option) => (
+                <CommandItem
+                  key={option.id}
+                  value={option.id}
+                  className="min-h-11 px-4 py-3 text-base"
+                  onSelect={() => {
+                    onSelect(option);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="truncate">{option.label}</span>
+                </CommandItem>
+              ))
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
