@@ -1,4 +1,5 @@
 using eLibrary.Book.Application.DTOs;
+using eLibrary.Book.Application.Common.Helpers;
 using eLibrary.Book.Application.Interfaces.Repositories;
 using eLibrary.Book.Application.Shared;
 using MediatR;
@@ -51,9 +52,9 @@ public class ReturnBookCommandHandler : IRequestHandler<ReturnBookCommand, ApiRe
             return ApiResponse<BorrowRecordDto>.Fail("Book return failed because the book could not be found.");
 
         var returnDate = returnDateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var overdueDays = returnDateOnly.DayNumber - DateOnly.FromDateTime(record.DueDate).DayNumber;
-        var fine = overdueDays > 0
-            ? overdueDays * 10m
+        var fineAmount = BorrowFineCalculator.Calculate(record.DueDate, returnDate);
+        decimal? fine = fineAmount > 0
+            ? fineAmount
             : (decimal?)null;
         var returned = await _borrowRepository.TryReturnAsync(
             record.Id,

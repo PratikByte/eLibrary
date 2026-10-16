@@ -80,7 +80,7 @@ function AdminReportsPage() {
           iconColor="#087F8C"
         />
         <StatCard
-          label="Overdue loans"
+          label="Overdue books"
           value={String(overdue.length)}
           icon={AlertTriangle}
           iconBgColor="#FFE8E5"
@@ -135,7 +135,7 @@ function AdminReportsPage() {
       />
 
       <ReportSection
-        title="Overdue loans"
+        title="Overdue Books"
         description="Books that should have been returned"
         rows={overdue.map((loan) => ({
           title: loan.bookName ?? "Unknown book",
@@ -151,9 +151,9 @@ function AdminReportsPage() {
         ]}
         chartLabelKey="title"
         chartValueKey="fine"
-        fileName="overdue-loans"
+        fileName="overdue-books"
         summary={[
-          { label: "Overdue loans", value: String(overdue.length) },
+          { label: "Overdue books", value: String(overdue.length) },
           { label: "Total fines", value: String(overdueFines) },
           {
             label: "Members affected",

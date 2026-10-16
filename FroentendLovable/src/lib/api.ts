@@ -103,6 +103,25 @@ export type ActiveBorrowRecordDto = {
   isOverdue: boolean;
 };
 
+export type BorrowTransactionDto = {
+  id: string;
+  userId: string;
+  userName: string;
+  bookId: string;
+  bookName: string;
+  author: string;
+  coverImageUrl?: string | null;
+  borrowDate: string;
+  dueDate: string;
+  returnDate?: string | null;
+  fine: number;
+  overdueDays: number;
+  isReturned: boolean;
+  isOverdue: boolean;
+};
+
+type BorrowTransactionResponseDto = Omit<BorrowTransactionDto, "userName">;
+
 export function getAuthSession(): AuthSession | null {
   const value = localStorage.getItem(AUTH_SESSION_KEY);
   if (!value) return null;
@@ -305,7 +324,9 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   if (!response.ok) {
     const fallback = `Request failed with status ${response.status}.`;
     if (parsed && typeof parsed === "object") {
-      throw new Error(formatApiError(parsed as { message?: string; title?: string; errors?: string[] }));
+      throw new Error(
+        formatApiError(parsed as { message?: string; title?: string; errors?: string[] }),
+      );
     }
     if (typeof parsed === "string" && parsed.trim()) {
       throw new Error(parsed);
@@ -416,7 +437,11 @@ export async function getBookById(bookId: string | number) {
   return unwrapApi(response);
 }
 
-export async function getBooksByAuthor(author: string, pageNumber = 1, pageSize = DEFAULT_PAGE_SIZE) {
+export async function getBooksByAuthor(
+  author: string,
+  pageNumber = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+) {
   const query = new URLSearchParams({
     author,
     pageNumber: String(pageNumber),
@@ -430,7 +455,9 @@ export async function getBooksByPriceRange(minPrice: number, maxPrice: number) {
     minPrice: String(minPrice),
     maxPrice: String(maxPrice),
   });
-  const response = await apiRequest<ApiResponse<BookDto[]>>(`/api/Book/price-range?${query.toString()}`);
+  const response = await apiRequest<ApiResponse<BookDto[]>>(
+    `/api/Book/price-range?${query.toString()}`,
+  );
   return unwrapApi(response) ?? [];
 }
 
@@ -527,6 +554,31 @@ export async function getActiveBorrowRecords() {
   return records;
 }
 
+export async function getRecentBorrowTransactions(count = 5): Promise<BorrowTransactionDto[]> {
+  const response = await apiRequest<ApiResponse<BorrowTransactionResponseDto[]>>(
+    `/api/BorrowReturnBook/transactions?count=${count}`,
+  );
+  const transactions = unwrapApi(response);
+  if (!Array.isArray(transactions)) {
+    throw new Error("The recent transactions response is invalid.");
+  }
+
+  const userIds = [...new Set(transactions.map((transaction) => transaction.userId))];
+  if (userIds.length === 0) return [];
+
+  const users = await getUsersByIds(userIds);
+  const usernamesById = new Map(users.map((user) => [user.id, user.username]));
+  return transactions.map((transaction) => ({
+    ...transaction,
+    userName: usernamesById.get(transaction.userId) ?? "Unknown member",
+    coverImageUrl: transaction.coverImageUrl
+      ? transaction.coverImageUrl.startsWith("http")
+        ? transaction.coverImageUrl
+        : `${API_BASE_URL}${transaction.coverImageUrl}`
+      : null,
+  }));
+}
+
 export async function returnBook(borrowId: string, returnDate: string) {
   return withApiToast(
     apiRequest<ApiResponse<BorrowRecordDto>>("/api/BorrowReturnBook/return", {
@@ -556,6 +608,19 @@ export async function getUsersPaged(
 export async function getUserById(userId: string) {
   const response = await apiRequest<ApiResponse<UserDto>>(`/api/User/${userId}`);
   return unwrapApi(response);
+}
+
+async function getUsersByIds(userIds: string[]) {
+  const query = new URLSearchParams();
+  userIds.forEach((userId) => query.append("ids", userId));
+  const response = await apiRequest<ApiResponse<Array<{ id: string; username: string }>>>(
+    `/api/User/lookup?${query.toString()}`,
+  );
+  const users = unwrapApi(response);
+  if (!Array.isArray(users)) {
+    throw new Error("The member lookup response is invalid.");
+  }
+  return users;
 }
 
 export async function deleteUser(userId: string) {
@@ -626,5 +691,23 @@ export async function getAvailableBooksReport(pageNumber = 1, pageSize = DEFAULT
 
 export async function getOverdueBooksReport() {
   const response = await apiRequest<ApiResponse<BorrowRecordDto[]>>("/api/Report/OverDue-books");
-  return unwrapApi(response) ?? [];
+  const records = unwrapApi(response) ?? [];
+  if (!Array.isArray(records)) {
+    throw new Error("The overdue books response is invalid.");
+  }
+
+  const userIds = [...new Set(records.map((record) => record.userId))];
+  if (userIds.length === 0) return records;
+
+  const users = await getUsersByIds(userIds);
+  const usernamesById = new Map(users.map((user) => [user.id, user.username]));
+  return records.map((record) => {
+    const userName = usernamesById.get(record.userId);
+    return {
+      ...record,
+      userName:
+        userName ??
+        (record.userName && record.userName !== "User" ? record.userName : `User ${record.userId}`),
+    };
+  });
 }

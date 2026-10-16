@@ -1,18 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowLeftRight, ChevronsUpDown, Repeat, X } from "lucide-react";
+import { ArrowLeftRight, ChevronsUpDown, Eye, Repeat, X } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { SectionCard } from "@/components/SectionCard";
+import {
+  TransactionDetailsDialog,
+  type TransactionStatus,
+} from "@/components/TransactionDetailsDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Command,
-  CommandEmpty,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Command, CommandEmpty, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Table,
@@ -22,22 +21,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { sampleLoans, type Member } from "@/lib/placeholder-data";
+import { type Member } from "@/lib/placeholder-data";
 import {
   borrowBook,
   getActiveBorrowRecords,
   getBooksPaged,
+  getRecentBorrowTransactions,
   getUsersPaged,
   mapBookDto,
   mapUserDto,
   returnBook,
+  type BorrowTransactionDto,
 } from "@/lib/api";
 
 export const Route = createFileRoute("/admin/borrow-return")({
   head: () => ({
     meta: [
       { title: "eLibrary | Digital Library" },
-      { name: "description", content: "Issue books to members and record returns with due dates and fines." },
+      {
+        name: "description",
+        content: "Issue books to members and record returns with due dates and fines.",
+      },
       { property: "og:title", content: "Borrow & Return — eLibrary Admin" },
       {
         property: "og:description",
@@ -84,6 +88,23 @@ function formatShortDate(value: string) {
   return year && month && day ? `${day}-${month}-${year.slice(-2)}` : value;
 }
 
+function formatTransactionDate(value: string) {
+  const date = new Date(`${value.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function getTransactionStatus(transaction: BorrowTransactionDto): TransactionStatus {
+  if (transaction.isReturned) return "Returned";
+  return transaction.isOverdue ? "Overdue" : "Active";
+}
+
 function getUtcDateInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -98,6 +119,38 @@ function AdminBorrowReturnPage() {
   const [returnInfo, setReturnInfo] = useState<string | null>(null);
   const [isBorrowing, setIsBorrowing] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
+  const [recentTransactions, setRecentTransactions] = useState<BorrowTransactionDto[]>([]);
+  const [recentTransactionsError, setRecentTransactionsError] = useState<string | null>(null);
+  const [isLoadingRecentTransactions, setIsLoadingRecentTransactions] = useState(true);
+  const [recentTransactionsRefreshKey, setRecentTransactionsRefreshKey] = useState(0);
+  const [selectedTransaction, setSelectedTransaction] = useState<BorrowTransactionDto | null>(null);
+
+  useEffect(() => {
+    let isCurrent = true;
+    setIsLoadingRecentTransactions(true);
+    setRecentTransactionsError(null);
+
+    getRecentBorrowTransactions(5)
+      .then((transactions) => {
+        if (isCurrent) setRecentTransactions(transactions);
+      })
+      .catch((requestError) => {
+        if (isCurrent) {
+          setRecentTransactionsError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load recent transactions.",
+          );
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoadingRecentTransactions(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [recentTransactionsRefreshKey]);
 
   async function handleBorrow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -108,8 +161,11 @@ function AdminBorrowReturnPage() {
       await borrowBook(selectedMember.id, selectedBook.id);
       setSelectedMember(null);
       setSelectedBook(null);
+      setRecentTransactionsRefreshKey((key) => key + 1);
     } catch (requestError) {
-      setBorrowError(requestError instanceof Error ? requestError.message : "Unable to issue this book.");
+      setBorrowError(
+        requestError instanceof Error ? requestError.message : "Unable to issue this book.",
+      );
     } finally {
       setIsBorrowing(false);
     }
@@ -129,13 +185,15 @@ function AdminBorrowReturnPage() {
         throw new Error("Select an active loan and return date.");
       }
       const record = await returnBook(borrowId, returnDate);
-      const fineText =
-        record.fine && record.fine > 0 ? ` Fine ${record.fine}.` : "";
+      const fineText = record.fine && record.fine > 0 ? ` Fine ${record.fine}.` : "";
       setReturnInfo(`Returned "${record.bookName ?? "book"}".${fineText}`);
       form.reset();
       setSelectedLoan(null);
+      setRecentTransactionsRefreshKey((key) => key + 1);
     } catch (requestError) {
-      setReturnError(requestError instanceof Error ? requestError.message : "Unable to record this return.");
+      setReturnError(
+        requestError instanceof Error ? requestError.message : "Unable to record this return.",
+      );
     } finally {
       setIsReturning(false);
     }
@@ -229,24 +287,66 @@ function AdminBorrowReturnPage() {
                 <TableHead>Borrowed</TableHead>
                 <TableHead>Due</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="w-12 px-0 text-left">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sampleLoans.map((loan) => (
-                <TableRow key={loan.id}>
-                  <TableCell className="font-medium">{loan.title}</TableCell>
-                  <TableCell className="text-muted-foreground">{loan.member}</TableCell>
-                  <TableCell>{loan.borrowed}</TableCell>
-                  <TableCell>{loan.due}</TableCell>
-                  <TableCell>
-                    <LoanStatus status={loan.status} />
+              {recentTransactionsError ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-destructive">
+                    {recentTransactionsError}
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : isLoadingRecentTransactions ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    Loading recent transactions...
+                  </TableCell>
+                </TableRow>
+              ) : recentTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    No recent transactions.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                recentTransactions.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell className="font-medium">{transaction.bookName}</TableCell>
+                    <TableCell className="text-muted-foreground">{transaction.userName}</TableCell>
+                    <TableCell>{formatTransactionDate(transaction.borrowDate)}</TableCell>
+                    <TableCell>{formatTransactionDate(transaction.dueDate)}</TableCell>
+                    <TableCell>
+                      <LoanStatus status={getTransactionStatus(transaction)} />
+                    </TableCell>
+                    <TableCell className="w-12 px-0 text-left">
+                      {/* Transactions support viewing details only. */}
+                      <div className="flex justify-start">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setSelectedTransaction(transaction)}
+                          aria-label={`View transaction for ${transaction.bookName}`}
+                          title="View transaction"
+                          className="text-primary hover:bg-accent hover:text-primary"
+                        >
+                          <Eye aria-hidden="true" className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
       </SectionCard>
+      <TransactionDetailsDialog
+        transaction={selectedTransaction}
+        status={selectedTransaction ? getTransactionStatus(selectedTransaction) : null}
+        onClose={() => setSelectedTransaction(null)}
+      />
     </AdminLayout>
   );
 }
@@ -372,7 +472,26 @@ function SearchablePicker({
 }
 
 function LoanStatus({ status }: { status: "Active" | "Overdue" | "Returned" }) {
-  if (status === "Overdue") return <Badge variant="destructive">Overdue</Badge>;
-  if (status === "Returned") return <Badge variant="outline">Returned</Badge>;
-  return <Badge variant="secondary">Active</Badge>;
+  if (status === "Overdue") {
+    return (
+      <Badge variant="outline" className="border-red-600 bg-red-50 text-red-700 hover:bg-red-50">
+        Overdue
+      </Badge>
+    );
+  }
+  if (status === "Returned") {
+    return (
+      <Badge variant="outline" className="border-green-600 bg-green-50 text-green-700">
+        Returned
+      </Badge>
+    );
+  }
+  return (
+    <Badge
+      variant="outline"
+      className="border-yellow-400 bg-yellow-50 text-yellow-800 hover:bg-yellow-50"
+    >
+      Active
+    </Badge>
+  );
 }

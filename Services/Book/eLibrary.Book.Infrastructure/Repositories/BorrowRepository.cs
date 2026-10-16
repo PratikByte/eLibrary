@@ -1,5 +1,6 @@
 using eLibrary.Book.Application.Interfaces.Repositories;
 using eLibrary.Book.Application.DTOs;
+using eLibrary.Book.Application.Common.Helpers;
 using BorrowRecordEntity = eLibrary.Book.Domain.Entities.BorrowRecord;
 using eLibrary.Book.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -44,12 +45,12 @@ public class BorrowRepository : IBorrowRepository
             }).ToListAsync(cancellationToken);
     }
 
-    public Task<List<BorrowTransactionDto>> GetRecentAsync(
+    public async Task<List<BorrowTransactionDto>> GetRecentAsync(
         int count,
         CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
-        return (
+        var transactions = await (
             from record in _context.BorrowRecords.AsNoTracking()
             join book in _context.Books.AsNoTracking() on record.BookId equals book.Id
             orderby record.BorrowDate descending
@@ -57,14 +58,29 @@ public class BorrowRepository : IBorrowRepository
             {
                 Id = record.Id,
                 UserId = record.UserId,
+                UserName = record.UserName,
                 BookId = book.Id,
                 BookName = book.Title ?? "Unknown Book",
+                Author = book.Author ?? "Unknown author",
+                CoverImageUrl = book.CoverImageMongoId == null ? null : $"/api/Book/{book.Id}/cover",
                 BorrowDate = record.BorrowDate,
                 DueDate = record.DueDate,
                 ReturnDate = record.ReturnDate,
+                Fine = record.Fine ?? 0m,
                 IsReturned = record.IsReturned,
-                IsOverdue = !record.IsReturned && record.DueDate < now
             }).Take(count).ToListAsync(cancellationToken);
+
+        foreach (var transaction in transactions)
+        {
+            transaction.OverdueDays = transaction.IsReturned
+                ? 0
+                : BorrowFineCalculator.GetDaysOverdue(transaction.DueDate, now);
+            transaction.IsOverdue = transaction.OverdueDays > 0;
+            if (!transaction.IsReturned)
+                transaction.Fine = BorrowFineCalculator.Calculate(transaction.DueDate, now);
+        }
+
+        return transactions;
     }
 
     public Task<List<BorrowRecordEntity>> GetOverdueAsync(CancellationToken cancellationToken) =>
