@@ -1,4 +1,5 @@
 using BookEntity = eLibrary.Book.Domain.Entities.Book;
+using ActivityEventEntity = eLibrary.Book.Domain.Entities.ActivityEvent;
 using BorrowRecordEntity = eLibrary.Book.Domain.Entities.BorrowRecord;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -21,6 +22,7 @@ public class BookDbContext : DbContext
     }
 
     public DbSet<BookEntity> Books => Set<BookEntity>();
+    public DbSet<ActivityEventEntity> ActivityEvents => Set<ActivityEventEntity>();
     public DbSet<BorrowRecordEntity> BorrowRecords => Set<BorrowRecordEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -46,6 +48,15 @@ public class BookDbContext : DbContext
             entity.Ignore(x => x.BookName);
             entity.Property(x => x.Fine).HasPrecision(10, 2);
             entity.HasIndex(x => new { x.UserId, x.BookId, x.IsReturned });
+        });
+
+        modelBuilder.Entity<ActivityEventEntity>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.EventType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.BookName).IsRequired();
+            entity.HasIndex(x => new { x.EventType, x.SubjectId }).IsUnique();
+            entity.HasIndex(x => x.OccurredAt);
         });
     }
 

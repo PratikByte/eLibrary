@@ -28,4 +28,15 @@ public class ReportController : ControllerBase
     {
         return Ok(await _mediator.Send(new GetBorrowReportQuery()));
     }
+
+    [HttpGet("Recent-activity")]
+    public async Task<IActionResult> GetRecentActivity(
+        [FromQuery] int count = 10,
+        CancellationToken cancellationToken = default)
+    {
+        if (count is < 1 or > 100)
+            return BadRequest(new { message = "Count must be between 1 and 100." });
+
+        return Ok(await _mediator.Send(new GetRecentActivityQuery(count), cancellationToken));
+    }
 }

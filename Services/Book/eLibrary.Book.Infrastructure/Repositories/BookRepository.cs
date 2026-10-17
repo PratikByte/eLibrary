@@ -1,4 +1,5 @@
 using eLibrary.Book.Application.Interfaces.Repositories;
+using eLibrary.Book.Domain.Entities;
 using bookEntity = eLibrary.Book.Domain.Entities.Book;
 using eLibrary.Book.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,14 @@ public class BookRepository : IBookRepository
     public async Task AddBookAsync(bookEntity book)
     {
         _context.Books.Add(book);
+        _context.ActivityEvents.Add(new ActivityEvent
+        {
+            EventType = ActivityEventTypes.BookAdded,
+            SubjectId = book.Id,
+            BookId = book.Id,
+            BookName = book.Title ?? "Unknown Book",
+            OccurredAt = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync();
     }
 

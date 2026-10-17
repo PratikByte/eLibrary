@@ -1,6 +1,7 @@
 using eLibrary.Book.Application.Interfaces.Repositories;
 using eLibrary.Book.Application.DTOs;
 using eLibrary.Book.Application.Common.Helpers;
+using eLibrary.Book.Domain.Entities;
 using BorrowRecordEntity = eLibrary.Book.Domain.Entities.BorrowRecord;
 using eLibrary.Book.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,15 @@ public class BorrowRepository : IBorrowRepository
     public async Task AddAsync(BorrowRecordEntity borrowRecord, CancellationToken cancellationToken)
     {
         await _context.BorrowRecords.AddAsync(borrowRecord, cancellationToken);
+        await _context.ActivityEvents.AddAsync(new ActivityEvent
+        {
+            EventType = ActivityEventTypes.BookBorrowed,
+            SubjectId = borrowRecord.Id,
+            UserId = borrowRecord.UserId,
+            BookId = borrowRecord.BookId,
+            BookName = borrowRecord.BookName,
+            OccurredAt = borrowRecord.BorrowDate
+        }, cancellationToken);
     }
 
     public Task<BorrowRecordEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
@@ -114,6 +124,12 @@ public class BorrowRepository : IBorrowRepository
         CancellationToken cancellationToken)
     {
         await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        var loanDetails = await (
+            from record in _context.BorrowRecords.AsNoTracking()
+            join book in _context.Books.AsNoTracking() on record.BookId equals book.Id
+            where record.Id == borrowId
+            select new { record.UserId, BookName = book.Title ?? "Unknown Book" }
+        ).FirstOrDefaultAsync(cancellationToken);
 
         var updatedRecords = await _context.BorrowRecords
             .Where(record => record.Id == borrowId && !record.IsReturned)
@@ -134,6 +150,20 @@ public class BorrowRepository : IBorrowRepository
 
         if (updatedBooks == 0)
             throw new InvalidOperationException($"Book with ID {bookId} could not be found while recording its return.");
+
+        if (loanDetails is null)
+            throw new InvalidOperationException($"Borrow record with ID {borrowId} could not be found while recording its return.");
+
+        _context.ActivityEvents.Add(new ActivityEvent
+        {
+            EventType = ActivityEventTypes.BookReturned,
+            SubjectId = borrowId,
+            UserId = loanDetails.UserId,
+            BookId = bookId,
+            BookName = loanDetails.BookName,
+            OccurredAt = DateTime.UtcNow
+        });
+        await _context.SaveChangesAsync(cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
         return true;

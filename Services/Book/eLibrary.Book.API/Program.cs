@@ -5,6 +5,7 @@ using eLibrary.Book.Application.Interfaces;
 using eLibrary.Book.Infrastructure.Persistence;
 using eLibrary.Book.Infrastructure.Repositories;
 using eLibrary.Book.Infrastructure.Services;
+using eLibrary.Book.API.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MediatR;
@@ -58,7 +59,9 @@ builder.Services.AddDbContext<BookDbContext>(options =>
 // Book service dependencies
 builder.Services.AddScoped<IBookRepository, BookRepository>();
 builder.Services.AddScoped<IBorrowRepository, BorrowRepository>();
+builder.Services.AddScoped<IActivityRepository, ActivityRepository>();
 builder.Services.AddScoped<IMongoMediaStore, MongoMediaStore>();
+builder.Services.AddHostedService<ActivityMonitorService>();
 
 // MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(AddBookCommand).Assembly));

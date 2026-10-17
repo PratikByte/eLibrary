@@ -120,6 +120,16 @@ export type BorrowTransactionDto = {
   isOverdue: boolean;
 };
 
+export type RecentActivityDto = {
+  id: string;
+  eventType: "book-added" | "book-borrowed" | "book-returned" | "loan-overdue";
+  userId?: string | null;
+  userName?: string | null;
+  bookName: string;
+  occurredAt: string;
+  isApproximate: boolean;
+};
+
 type BorrowTransactionResponseDto = Omit<BorrowTransactionDto, "userName">;
 
 export function getAuthSession(): AuthSession | null {
@@ -710,4 +720,25 @@ export async function getOverdueBooksReport() {
         (record.userName && record.userName !== "User" ? record.userName : `User ${record.userId}`),
     };
   });
+}
+
+export async function getRecentActivity(count = 10): Promise<RecentActivityDto[]> {
+  const response = await apiRequest<ApiResponse<Omit<RecentActivityDto, "userName">[]>>(
+    `/api/Report/Recent-activity?count=${count}`,
+  );
+  const events = unwrapApi(response);
+  if (!Array.isArray(events)) {
+    throw new Error("The recent activity response is invalid.");
+  }
+  if (events.length === 0) return [];
+
+  const userIds = [...new Set(events.flatMap((event) => (event.userId ? [event.userId] : [])))];
+  if (userIds.length === 0) return events;
+
+  const users = await getUsersByIds(userIds);
+  const usernamesById = new Map(users.map((user) => [user.id, user.username]));
+  return events.map((event) => ({
+    ...event,
+    userName: event.userId ? (usernamesById.get(event.userId) ?? null) : null,
+  }));
 }
