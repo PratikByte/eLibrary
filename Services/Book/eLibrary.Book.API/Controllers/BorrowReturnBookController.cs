@@ -28,16 +28,33 @@ public class BorrowReturnBookController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
-    [HttpGet("transactions")]
-    public async Task<IActionResult> GetRecentTransactions(
-        [FromQuery] int count = 20,
+    [HttpGet("active/paged")]
+    public async Task<IActionResult> GetActiveBorrowRecordsPaged(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 5,
         CancellationToken cancellationToken = default)
     {
-        if (count is < 1 or > 100)
-            return BadRequest(new { message = "Count must be between 1 and 100." });
+        if (pageNumber < 1 || pageSize is < 1 or > 100)
+            return BadRequest(new { message = "Page number must be positive and page size must be between 1 and 100." });
 
         var result = await _mediator.Send(
-            new GetRecentBorrowTransactionsQuery(count),
+            new GetPagedActiveBorrowRecordsQuery(pageNumber, pageSize),
+            cancellationToken);
+        return Ok(result);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("transactions/paged")]
+    public async Task<IActionResult> GetRecentTransactionsPaged(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 5,
+        CancellationToken cancellationToken = default)
+    {
+        if (pageNumber < 1 || pageSize is < 1 or > 100)
+            return BadRequest(new { message = "Page number must be positive and page size must be between 1 and 100." });
+
+        var result = await _mediator.Send(
+            new GetPagedBorrowTransactionsQuery(pageNumber, pageSize),
             cancellationToken);
         return Ok(result);
     }

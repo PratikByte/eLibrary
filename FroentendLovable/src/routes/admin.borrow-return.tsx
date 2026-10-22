@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ArrowLeftRight, ChevronsUpDown, Eye, Repeat, X } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { SectionCard } from "@/components/SectionCard";
+import { ListPagination } from "@/components/list-pagination";
 import {
   TransactionDetailsDialog,
   type TransactionStatus,
@@ -24,9 +25,10 @@ import {
 import { type Member } from "@/lib/placeholder-data";
 import {
   borrowBook,
+  DEFAULT_PAGE_SIZE,
   getActiveBorrowRecords,
   getBooksPaged,
-  getRecentBorrowTransactions,
+  getPagedBorrowTransactions,
   getUsersPaged,
   mapBookDto,
   mapUserDto,
@@ -120,6 +122,8 @@ function AdminBorrowReturnPage() {
   const [isBorrowing, setIsBorrowing] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
   const [recentTransactions, setRecentTransactions] = useState<BorrowTransactionDto[]>([]);
+  const [recentTransactionsPage, setRecentTransactionsPage] = useState(1);
+  const [recentTransactionsTotalPages, setRecentTransactionsTotalPages] = useState(1);
   const [recentTransactionsError, setRecentTransactionsError] = useState<string | null>(null);
   const [isLoadingRecentTransactions, setIsLoadingRecentTransactions] = useState(true);
   const [recentTransactionsRefreshKey, setRecentTransactionsRefreshKey] = useState(0);
@@ -130,9 +134,13 @@ function AdminBorrowReturnPage() {
     setIsLoadingRecentTransactions(true);
     setRecentTransactionsError(null);
 
-    getRecentBorrowTransactions(5)
-      .then((transactions) => {
-        if (isCurrent) setRecentTransactions(transactions);
+    getPagedBorrowTransactions(recentTransactionsPage, DEFAULT_PAGE_SIZE)
+      .then((response) => {
+        if (isCurrent) {
+          setRecentTransactions(response.items);
+          setRecentTransactionsPage(response.pageNumber);
+          setRecentTransactionsTotalPages(response.totalPages || 1);
+        }
       })
       .catch((requestError) => {
         if (isCurrent) {
@@ -150,7 +158,7 @@ function AdminBorrowReturnPage() {
     return () => {
       isCurrent = false;
     };
-  }, [recentTransactionsRefreshKey]);
+  }, [recentTransactionsPage, recentTransactionsRefreshKey]);
 
   async function handleBorrow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -161,6 +169,7 @@ function AdminBorrowReturnPage() {
       await borrowBook(selectedMember.id, selectedBook.id);
       setSelectedMember(null);
       setSelectedBook(null);
+      setRecentTransactionsPage(1);
       setRecentTransactionsRefreshKey((key) => key + 1);
     } catch (requestError) {
       setBorrowError(
@@ -189,6 +198,7 @@ function AdminBorrowReturnPage() {
       setReturnInfo(`Returned "${record.bookName ?? "book"}".${fineText}`);
       form.reset();
       setSelectedLoan(null);
+      setRecentTransactionsPage(1);
       setRecentTransactionsRefreshKey((key) => key + 1);
     } catch (requestError) {
       setReturnError(
@@ -341,6 +351,11 @@ function AdminBorrowReturnPage() {
             </TableBody>
           </Table>
         </div>
+        <ListPagination
+          page={recentTransactionsPage}
+          totalPages={recentTransactionsTotalPages}
+          onPageChange={setRecentTransactionsPage}
+        />
       </SectionCard>
       <TransactionDetailsDialog
         transaction={selectedTransaction}

@@ -35,13 +35,34 @@ public class BorrowRepository : IBorrowRepository
         _context.BorrowRecords.FirstOrDefaultAsync(record => record.Id == id, cancellationToken);
 
     public Task<List<ActiveBorrowRecordDto>> GetActiveAsync(CancellationToken cancellationToken)
+        => GetActiveRecordsQuery()
+            .OrderBy(record => record.DueDate)
+            .ToListAsync(cancellationToken);
+
+    public async Task<(List<ActiveBorrowRecordDto> Records, int TotalRecords)> GetActivePagedAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var query = GetActiveRecordsQuery();
+        var totalRecords = await query.CountAsync(cancellationToken);
+        var records = await query
+            .OrderBy(record => record.DueDate)
+            .ThenBy(record => record.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (records, totalRecords);
+    }
+
+    private IQueryable<ActiveBorrowRecordDto> GetActiveRecordsQuery()
     {
         var now = DateTime.UtcNow;
         return (
             from record in _context.BorrowRecords.AsNoTracking()
             where !record.IsReturned
             join book in _context.Books.AsNoTracking() on record.BookId equals book.Id
-            orderby record.DueDate
             select new ActiveBorrowRecordDto
             {
                 Id = record.Id,
@@ -52,34 +73,49 @@ public class BorrowRepository : IBorrowRepository
                 BorrowDate = record.BorrowDate,
                 DueDate = record.DueDate,
                 IsOverdue = record.DueDate < now
-            }).ToListAsync(cancellationToken);
+            });
     }
 
-    public async Task<List<BorrowTransactionDto>> GetRecentAsync(
-        int count,
+    public async Task<(List<BorrowTransactionDto> Transactions, int TotalRecords)> GetRecentPagedAsync(
+        int pageNumber,
+        int pageSize,
         CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow;
-        var transactions = await (
-            from record in _context.BorrowRecords.AsNoTracking()
-            join book in _context.Books.AsNoTracking() on record.BookId equals book.Id
-            orderby record.BorrowDate descending
-            select new BorrowTransactionDto
-            {
-                Id = record.Id,
-                UserId = record.UserId,
-                UserName = record.UserName,
-                BookId = book.Id,
-                BookName = book.Title ?? "Unknown Book",
-                Author = book.Author ?? "Unknown author",
-                CoverImageUrl = book.CoverImageMongoId == null ? null : $"/api/Book/{book.Id}/cover",
-                BorrowDate = record.BorrowDate,
-                DueDate = record.DueDate,
-                ReturnDate = record.ReturnDate,
-                Fine = record.Fine ?? 0m,
-                IsReturned = record.IsReturned,
-            }).Take(count).ToListAsync(cancellationToken);
+        var query = GetBorrowTransactionsQuery();
+        var totalRecords = await query.CountAsync(cancellationToken);
+        var transactions = await query
+            .OrderByDescending(transaction => transaction.BorrowDate)
+            .ThenByDescending(transaction => transaction.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
 
+        return (CalculateTransactionFines(transactions), totalRecords);
+    }
+
+    private IQueryable<BorrowTransactionDto> GetBorrowTransactionsQuery() =>
+        from record in _context.BorrowRecords.AsNoTracking()
+        join book in _context.Books.AsNoTracking() on record.BookId equals book.Id
+        select new BorrowTransactionDto
+        {
+            Id = record.Id,
+            UserId = record.UserId,
+            UserName = record.UserName,
+            BookId = book.Id,
+            BookName = book.Title ?? "Unknown Book",
+            Author = book.Author ?? "Unknown author",
+            CoverImageUrl = book.CoverImageMongoId == null ? null : $"/api/Book/{book.Id}/cover",
+            BorrowDate = record.BorrowDate,
+            DueDate = record.DueDate,
+            ReturnDate = record.ReturnDate,
+            Fine = record.Fine ?? 0m,
+            IsReturned = record.IsReturned,
+        };
+
+    private static List<BorrowTransactionDto> CalculateTransactionFines(
+        List<BorrowTransactionDto> transactions)
+    {
+        var now = DateTime.UtcNow;
         foreach (var transaction in transactions)
         {
             transaction.OverdueDays = transaction.IsReturned

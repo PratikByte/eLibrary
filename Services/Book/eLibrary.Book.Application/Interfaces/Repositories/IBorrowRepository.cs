@@ -8,7 +8,14 @@ public interface IBorrowRepository
     Task AddAsync(BorrowRecordEntity borrowRecord, CancellationToken cancellationToken);
     Task<BorrowRecordEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<ActiveBorrowRecordDto>> GetActiveAsync(CancellationToken cancellationToken);
-    Task<List<BorrowTransactionDto>> GetRecentAsync(int count, CancellationToken cancellationToken);
+    Task<(List<ActiveBorrowRecordDto> Records, int TotalRecords)> GetActivePagedAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken);
+    Task<(List<BorrowTransactionDto> Transactions, int TotalRecords)> GetRecentPagedAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken);
     Task<List<BorrowRecordEntity>> GetOverdueAsync(CancellationToken cancellationToken);
     Task<bool> TryReturnAsync(
         Guid borrowId,

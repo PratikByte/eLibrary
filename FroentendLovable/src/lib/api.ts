@@ -620,15 +620,26 @@ export async function getActiveBorrowRecords() {
   return records;
 }
 
-export async function getRecentBorrowTransactions(count = 5): Promise<BorrowTransactionDto[]> {
-  const response = await apiRequest<ApiResponse<BorrowTransactionResponseDto[]>>(
-    `/api/BorrowReturnBook/transactions?count=${count}`,
+export async function getPagedBorrowTransactions(
+  pageNumber = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+): Promise<PagedResponse<BorrowTransactionDto>> {
+  const response = await apiRequest<PagedResponse<BorrowTransactionResponseDto>>(
+    `/api/BorrowReturnBook/transactions/paged?pageNumber=${pageNumber}&pageSize=${pageSize}`,
   );
-  const transactions = unwrapApi(response);
-  if (!Array.isArray(transactions)) {
-    throw new Error("The recent transactions response is invalid.");
+  if (!Array.isArray(response.items)) {
+    throw new Error("The paged transactions response is invalid.");
   }
 
+  return {
+    ...response,
+    items: await addBorrowTransactionUserNames(response.items),
+  };
+}
+
+async function addBorrowTransactionUserNames(
+  transactions: BorrowTransactionResponseDto[],
+): Promise<BorrowTransactionDto[]> {
   const userIds = [...new Set(transactions.map((transaction) => transaction.userId))];
   if (userIds.length === 0) return [];
 
