@@ -52,13 +52,18 @@ public class GetBookByAuthorQueryHandler : IRequestHandler<GetBookByAuthorQuery,
 
             return new PagedResponse<BookDto>(items, totalRecords, request.PageNumber, request.PageSize, "Books by author retrieved successfully.");
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving books by author {Author}", request.Author);
-            return new PagedResponse<BookDto>(new List<BookDto>(), 0, request.PageNumber, request.PageSize, ex.Message)
+            return new PagedResponse<BookDto>(new List<BookDto>(), 0, request.PageNumber, request.PageSize,
+                "An error occurred while retrieving books by author.")
             {
                 Success = false,
-                Errors = new[] { ex.Message }
+                ErrorCode = "INTERNAL_SERVER_ERROR"
             };
         }
     }

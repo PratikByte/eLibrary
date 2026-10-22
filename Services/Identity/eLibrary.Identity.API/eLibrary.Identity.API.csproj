@@ -23,5 +23,6 @@
   <ItemGroup>
     <ProjectReference Include="..\eLibrary.Identity.Application\eLibrary.Identity.Application.csproj" />
     <ProjectReference Include="..\eLibrary.Identity.Infrastructure\eLibrary.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Shared\eLibrary.Common.Api\eLibrary.Common.Api.csproj" />
   </ItemGroup>
 </Project>

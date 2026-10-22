@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace eLibrary.Book.Domain.Pagination;
 
 /// <summary>
@@ -12,6 +14,8 @@ public class PagedResponse<T>
     public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalRecords / PageSize) : 0;
     public bool Success { get; set; } = true;
     public string Message { get; set; } = "Success";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ErrorCode { get; set; }
     public string[] Errors { get; set; } = Array.Empty<string>();
 
     public PagedResponse() { }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
+using eLibrary.Common.Api;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,6 +68,7 @@ builder.Configuration.AddJsonFile(ocelotFile, optional: false, reloadOnChange: t
 builder.Services.AddOcelot(builder.Configuration);
 
 var app = builder.Build();
+app.UseApiErrorHandling();
 
 if (app.Environment.IsDevelopment())
 {

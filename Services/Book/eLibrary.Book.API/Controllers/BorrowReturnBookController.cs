@@ -50,7 +50,7 @@ public class BorrowReturnBookController : ControllerBase
             return Forbid();
 
         var result = await _mediator.Send(command with { UserId = userId.Value, UserName = GetUserName() });
-        return result.Success ? Ok(result) : BadRequest(result);
+        return Ok(result);
     }
 
     [HttpPost("return")]
@@ -67,13 +67,7 @@ public class BorrowReturnBookController : ControllerBase
             UserName = GetUserName()
         });
 
-        if (result.Success)
-            return Ok(result);
-        if (result.Message?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true)
-            return NotFound(result);
-        if (result.Message?.Contains("not allowed", StringComparison.OrdinalIgnoreCase) == true)
-            return Forbid();
-        return BadRequest(result);
+        return Ok(result);
     }
 
     private Guid? GetEffectiveUserId(Guid requestedUserId) =>

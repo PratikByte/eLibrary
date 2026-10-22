@@ -6,6 +6,7 @@ using eLibrary.Identity.Domain.Entities;
 using eLibrary.Identity.Infrastructure.Persistence;
 using eLibrary.Identity.Infrastructure.Repositories;
 using eLibrary.Identity.Infrastructure.Services;
+using eLibrary.Common.Api;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -16,7 +17,7 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // 1) API basics
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddApiErrorHandling();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -97,6 +98,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+app.UseApiErrorHandling();
 
 if (app.Environment.IsDevelopment() && !string.IsNullOrWhiteSpace(builder.Configuration["IdentitySeed:AdminPassword"]))
 {

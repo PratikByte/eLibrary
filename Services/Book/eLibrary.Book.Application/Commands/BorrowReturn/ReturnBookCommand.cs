@@ -29,27 +29,27 @@ public class ReturnBookCommandHandler : IRequestHandler<ReturnBookCommand, ApiRe
     {
         var record = await _borrowRepository.GetByIdAsync(request.BorrowId, cancellationToken);
         if (record is null)
-            return ApiResponse<BorrowRecordDto>.Fail($"Borrow record with ID {request.BorrowId} not found.");
+            return ApiResponse<BorrowRecordDto>.FailWithCode("NOT_FOUND", "Borrow record not found.");
 
         if (!request.IsAdmin && (!request.CurrentUserId.HasValue || request.CurrentUserId.Value != record.UserId))
-            return ApiResponse<BorrowRecordDto>.Fail("You are not allowed to return this book.");
+            return ApiResponse<BorrowRecordDto>.FailWithCode("FORBIDDEN", "You are not allowed to return this book.");
 
         if (record.IsReturned)
-            return ApiResponse<BorrowRecordDto>.Fail("This book has already been returned.");
+            return ApiResponse<BorrowRecordDto>.FailWithCode("ALREADY_RETURNED", "This book has already been returned.");
 
         if (!request.ReturnDate.HasValue)
-            return ApiResponse<BorrowRecordDto>.Fail("A return date is required.");
+            return ApiResponse<BorrowRecordDto>.FailWithCode("VALIDATION_ERROR", "A return date is required.");
 
         var returnDateOnly = request.ReturnDate.Value;
         if (returnDateOnly > DateOnly.FromDateTime(DateTime.UtcNow))
-            return ApiResponse<BorrowRecordDto>.Fail("The return date cannot be in the future.");
+            return ApiResponse<BorrowRecordDto>.FailWithCode("VALIDATION_ERROR", "The return date cannot be in the future.");
 
         if (returnDateOnly < DateOnly.FromDateTime(record.BorrowDate))
-            return ApiResponse<BorrowRecordDto>.Fail("The return date cannot be before the borrow date.");
+            return ApiResponse<BorrowRecordDto>.FailWithCode("VALIDATION_ERROR", "The return date cannot be before the borrow date.");
 
         var book = await _bookRepository.GetBookByIdAsync(record.BookId, cancellationToken);
         if (book is null)
-            return ApiResponse<BorrowRecordDto>.Fail("Book return failed because the book could not be found.");
+            return ApiResponse<BorrowRecordDto>.FailWithCode("NOT_FOUND", "The book for this return could not be found.");
 
         var returnDate = returnDateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var fineAmount = BorrowFineCalculator.Calculate(record.DueDate, returnDate);
@@ -63,7 +63,7 @@ public class ReturnBookCommandHandler : IRequestHandler<ReturnBookCommand, ApiRe
             fine,
             cancellationToken);
         if (!returned)
-            return ApiResponse<BorrowRecordDto>.Fail("This book has already been returned.");
+            return ApiResponse<BorrowRecordDto>.FailWithCode("ALREADY_RETURNED", "This book has already been returned.");
 
         record.IsReturned = true;
         record.ReturnDate = returnDate;

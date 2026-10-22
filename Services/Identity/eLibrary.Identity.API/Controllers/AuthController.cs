@@ -25,13 +25,20 @@ public class AuthController : ControllerBase
         if (passwordError is not null)
             return BadRequest(new { message = passwordError });
 
-        var result = await _mediator.Send(new RegisterUserCommand(request));
-        return Ok(new
+        try
         {
-            result.Email,
-            result.Username,
-            Role = "User"
-        });
+            var result = await _mediator.Send(new RegisterUserCommand(request));
+            return Ok(new
+            {
+                result.Email,
+                result.Username,
+                Role = "User"
+            });
+        }
+        catch (UserAlreadyExistsException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
     }
 
     // Same behavior as the current root app: check username, verify password, and issue JWT.
@@ -47,9 +54,9 @@ public class AuthController : ControllerBase
             var result = await _mediator.Send(new AuthenticateUserCommand(request));
             return Ok(result);
         }
-        catch (Exception ex)
+        catch (UnauthorizedAccessException)
         {
-            return Unauthorized(new { message = ex.Message });
+            return Unauthorized(new { message = "Invalid username or password." });
         }
     }
 

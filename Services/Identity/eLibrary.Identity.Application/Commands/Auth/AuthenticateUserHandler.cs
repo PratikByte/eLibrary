@@ -28,11 +28,11 @@ public class AuthenticateUserHandler : IRequestHandler<AuthenticateUserCommand, 
         // Match the existing app flow: find by username, validate password, then issue JWT.
         var user = await _userRepository.GetByUsernameAsync(request.LoginData.Username);
         if (user == null)
-            throw new Exception("Invalid username");
+            throw new UnauthorizedAccessException();
 
         var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.LoginData.Password);
         if (result == PasswordVerificationResult.Failed)
-            throw new Exception("Invalid password");
+            throw new UnauthorizedAccessException();
 
         var token = _tokenService.GenerateToken(user);
 

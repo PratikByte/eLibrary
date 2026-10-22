@@ -6,6 +6,14 @@ using Microsoft.AspNetCore.Identity;
 
 namespace eLibrary.Identity.Application.Commands.Auth;
 
+public sealed class UserAlreadyExistsException : Exception
+{
+    public UserAlreadyExistsException()
+        : base("User already exists with this email or username.")
+    {
+    }
+}
+
 public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, RegisterUserDto>
 {
     private readonly IUserRepository _userRepository;
@@ -23,7 +31,7 @@ public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, Register
         if (await _userRepository.IsEmailDuplicateAsync(request.RegisterUserDto.Email) ||
             await _userRepository.IsUsernameDuplicateAsync(request.RegisterUserDto.Username))
         {
-            throw new Exception("User already exists with this email or username");
+            throw new UserAlreadyExistsException();
         }
 
         var user = new User

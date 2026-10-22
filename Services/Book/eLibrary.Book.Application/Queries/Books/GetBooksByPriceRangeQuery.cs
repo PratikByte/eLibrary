@@ -49,10 +49,16 @@ public class GetBooksByPriceRangeQueryHandler : IRequestHandler<GetBooksByPriceR
 
             return ApiResponse<List<BookDto>>.Ok(items, "Books retrieved successfully.");
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving books by price range {MinPrice} to {MaxPrice}", request.MinPrice, request.MaxPrice);
-            return ApiResponse<List<BookDto>>.Fail("An error occurred while retrieving books by price range.", ex.Message);
+            return ApiResponse<List<BookDto>>.FailWithCode(
+                "INTERNAL_SERVER_ERROR",
+                "An error occurred while retrieving books by price range.");
         }
     }
 }

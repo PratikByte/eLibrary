@@ -6,6 +6,7 @@ using eLibrary.Book.Infrastructure.Persistence;
 using eLibrary.Book.Infrastructure.Repositories;
 using eLibrary.Book.Infrastructure.Services;
 using eLibrary.Book.API.Services;
+using eLibrary.Common.Api;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MediatR;
@@ -17,7 +18,7 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // API basics
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddApiErrorHandling();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<eLibrary.Book.Application.Commands.Books.AddBookCommand>();
@@ -96,6 +97,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+app.UseApiErrorHandling();
 
 if (app.Environment.IsDevelopment())
 {

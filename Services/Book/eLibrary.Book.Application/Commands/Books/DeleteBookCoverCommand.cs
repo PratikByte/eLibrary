@@ -42,7 +42,7 @@ public class DeleteBookCoverCommandHandler : IRequestHandler<DeleteBookCoverComm
         {
             var book = await _bookRepository.GetBookByIdAsync(request.BookId, cancellationToken);
             if (book == null)
-                return ApiResponse<bool>.Fail("Book not found.");
+                return ApiResponse<bool>.FailWithCode("NOT_FOUND", "Book not found.");
 
             if (!string.IsNullOrWhiteSpace(book.CoverImageMongoId))
                 await _coverStore.DeleteAsync(book.CoverImageMongoId, cancellationToken);
@@ -52,10 +52,16 @@ public class DeleteBookCoverCommandHandler : IRequestHandler<DeleteBookCoverComm
 
             return ApiResponse<bool>.Ok(true, "Book cover deleted successfully.");
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting cover for book {BookId}", request.BookId);
-            return ApiResponse<bool>.Fail("An error occurred while deleting the book cover.", ex.Message);
+            return ApiResponse<bool>.FailWithCode(
+                "INTERNAL_SERVER_ERROR",
+                "An error occurred while deleting the book cover.");
         }
     }
 }

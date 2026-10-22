@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace eLibrary.Book.Application.Shared;
 
 /// <summary>
@@ -7,6 +9,8 @@ public class ApiResponse<T>
 {
     public bool Success { get; set; }
     public string? Message { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ErrorCode { get; set; }
     public T? Data { get; set; }
     public string[]? Errors { get; set; }
 
@@ -15,4 +19,13 @@ public class ApiResponse<T>
 
     public static ApiResponse<T> Fail(string message, params string[] errors) =>
         new() { Success = false, Message = message, Errors = errors.Length > 0 ? errors : null };
+
+    public static ApiResponse<T> FailWithCode(string errorCode, string message, params string[] errors) =>
+        new()
+        {
+            Success = false,
+            ErrorCode = errorCode,
+            Message = message,
+            Errors = errors.Length > 0 ? errors : null
+        };
 }

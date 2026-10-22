@@ -31,6 +31,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "eLibrary.Book.Domain", "Ser
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "eLibrary.Book.Infrastructure", "Services\Book\eLibrary.Book.Infrastructure\eLibrary.Book.Infrastructure.csproj", "{97FC17EA-7F3E-45E2-B456-179247FAA059}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "eLibrary.Common.Api", "Services\Shared\eLibrary.Common.Api\eLibrary.Common.Api.csproj", "{E5724F78-39B8-45B3-BAE1-EB6B1BD083A5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{A3E69C8C-10C8-47DB-BFF9-B7A7DF48C1D9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -77,6 +81,10 @@ Global
 		{97FC17EA-7F3E-45E2-B456-179247FAA059}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{97FC17EA-7F3E-45E2-B456-179247FAA059}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{97FC17EA-7F3E-45E2-B456-179247FAA059}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E5724F78-39B8-45B3-BAE1-EB6B1BD083A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E5724F78-39B8-45B3-BAE1-EB6B1BD083A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E5724F78-39B8-45B3-BAE1-EB6B1BD083A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E5724F78-39B8-45B3-BAE1-EB6B1BD083A5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -97,5 +105,7 @@ Global
 		{B53FEA16-D94C-4E21-AE91-43DFC41E20F4} = {B642FC89-3DB9-42AE-B77A-A099A59C7C3E}
 		{A37F79CB-1A41-4BDD-89F9-BDA4F0B37F54} = {B642FC89-3DB9-42AE-B77A-A099A59C7C3E}
 		{97FC17EA-7F3E-45E2-B456-179247FAA059} = {B642FC89-3DB9-42AE-B77A-A099A59C7C3E}
+		{A3E69C8C-10C8-47DB-BFF9-B7A7DF48C1D9} = {223E380D-26CC-4A9D-A6A0-2B44F217F888}
+		{E5724F78-39B8-45B3-BAE1-EB6B1BD083A5} = {A3E69C8C-10C8-47DB-BFF9-B7A7DF48C1D9}
 	EndGlobalSection
 EndGlobal

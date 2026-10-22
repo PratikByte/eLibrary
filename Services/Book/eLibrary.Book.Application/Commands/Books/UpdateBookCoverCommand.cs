@@ -48,14 +48,16 @@ public class UpdateBookCoverCommandHandler : IRequestHandler<UpdateBookCoverComm
         {
             var book = await _bookRepository.GetBookByIdAsync(request.BookId, cancellationToken);
             if (book == null)
-                return ApiResponse<bool>.Fail("Book not found.");
+                return ApiResponse<bool>.FailWithCode("NOT_FOUND", "Book not found.");
 
             var extension = Path.GetExtension(request.CoverImage.FileName);
             if (request.CoverImage.Length == 0 ||
                 request.CoverImage.Length > MaxCoverSize ||
                 !AllowedCoverExtensions.Contains(extension))
             {
-                return ApiResponse<bool>.Fail("Cover image must be a non-empty JPG, PNG, or WebP file no larger than 5 MB.");
+                return ApiResponse<bool>.FailWithCode(
+                    "VALIDATION_ERROR",
+                    "Cover image must be a non-empty JPG, PNG, or WebP file no larger than 5 MB.");
             }
 
             var oldCoverId = book.CoverImageMongoId;
@@ -67,10 +69,16 @@ public class UpdateBookCoverCommandHandler : IRequestHandler<UpdateBookCoverComm
 
             return ApiResponse<bool>.Ok(true, "Book cover updated successfully.");
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating cover for book {BookId}", request.BookId);
-            return ApiResponse<bool>.Fail("An error occurred while updating the book cover.", ex.Message);
+            return ApiResponse<bool>.FailWithCode(
+                "INTERNAL_SERVER_ERROR",
+                "An error occurred while updating the book cover.");
         }
     }
 }

@@ -50,7 +50,10 @@ public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse
             var isDuplicate = await _bookRepository.IsDuplicate(request.BookDto.Title, request.BookDto.Author);
             if (isDuplicate)
             {
-                return ApiResponse<Guid>.Fail("Duplicate book entry.", "A book with the same title and author already exists.");
+                return ApiResponse<Guid>.FailWithCode(
+                    "CONFLICT",
+                    "Duplicate book entry.",
+                    "A book with the same title and author already exists.");
             }
 
             string? coverImageMongoId = null;
@@ -62,7 +65,9 @@ public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse
                     request.BookDto.CoverImage.Length > MaxCoverSize ||
                     !AllowedCoverExtensions.Contains(extension))
                 {
-                    return ApiResponse<Guid>.Fail("Cover image must be a non-empty JPG, PNG, or WebP file no larger than 5 MB.");
+                    return ApiResponse<Guid>.FailWithCode(
+                        "VALIDATION_ERROR",
+                        "Cover image must be a non-empty JPG, PNG, or WebP file no larger than 5 MB.");
                 }
 
                 coverImageMongoId = await _coverStore.SaveAsync(request.BookDto.CoverImage, "book-cover", cancellationToken);
@@ -81,10 +86,16 @@ public class AddBookCommandHandler : IRequestHandler<AddBookCommand, ApiResponse
             await _bookRepository.AddBookAsync(newBook);
             return ApiResponse<Guid>.Ok(newBook.Id, "Book added successfully.");
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while adding book: {Title} by {Author}", request.BookDto.Title, request.BookDto.Author);
-            return ApiResponse<Guid>.Fail("An error occurred while adding the book.", ex.Message);
+            return ApiResponse<Guid>.FailWithCode(
+                "INTERNAL_SERVER_ERROR",
+                "An error occurred while adding the book.");
         }
     }
 }

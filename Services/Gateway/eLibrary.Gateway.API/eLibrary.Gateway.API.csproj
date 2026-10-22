@@ -19,6 +19,7 @@
     <None Update="ocelot.json;ocelot.docker.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <ProjectReference Include="..\..\Shared\eLibrary.Common.Api\eLibrary.Common.Api.csproj" />
   </ItemGroup>
 
 </Project>

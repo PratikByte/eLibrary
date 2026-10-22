@@ -34,6 +34,8 @@ function isJwtExpired(token: string): boolean {
 export type ApiResponse<T> = {
   success: boolean;
   message?: string | null;
+  errorCode?: string | null;
+  requestId?: string | null;
   warning?: string | null;
   data?: T | null;
   errors?: string[] | null;
@@ -214,19 +216,68 @@ export function unwrapApi<T>(response: ApiResponse<T>): T {
   return response.data as T;
 }
 
-function formatApiError(error: {
-  message?: string | null;
-  title?: string | null;
-  errors?: string[] | Record<string, string[]> | null;
-}): string {
-  if (Array.isArray(error.errors) && error.errors[0]) {
-    return error.errors[0];
+const SAFE_API_ERROR_CODES = new Set([
+  "VALIDATION_ERROR",
+  "UNAUTHORIZED",
+  "FORBIDDEN",
+  "NOT_FOUND",
+  "REQUEST_TIMEOUT",
+  "CONFLICT",
+  "ALREADY_RETURNED",
+  "TOO_MANY_REQUESTS",
+  "GATEWAY_TIMEOUT",
+  "INTERNAL_SERVER_ERROR",
+]);
+
+function getStatusErrorMessage(status: number): string {
+  switch (status) {
+    case 400:
+    case 422:
+      return "Please check the information and try again.";
+    case 401:
+      return "Please sign in again to continue.";
+    case 403:
+      return "You do not have permission to perform this action.";
+    case 404:
+      return "The requested resource was not found.";
+    case 408:
+      return "The request timed out. Please try again.";
+    case 409:
+      return "The request conflicts with the current data.";
+    case 429:
+      return "Too many requests. Please try again later.";
+    default:
+      return status >= 500
+        ? "Something went wrong. Please try again later."
+        : "The request could not be completed.";
   }
-  if (error.errors && typeof error.errors === "object") {
-    const first = Object.values(error.errors)[0];
-    if (Array.isArray(first) && first[0]) return first[0];
+}
+
+function formatApiError(
+  error: {
+    errorCode?: unknown;
+    message?: unknown;
+    errors?: unknown;
+  },
+  fallback = "Request failed.",
+): string {
+  const errorCode = typeof error.errorCode === "string" ? error.errorCode.toUpperCase() : "";
+  if (!SAFE_API_ERROR_CODES.has(errorCode)) return fallback;
+  if (errorCode === "INTERNAL_SERVER_ERROR" || errorCode === "GATEWAY_TIMEOUT") {
+    return getStatusErrorMessage(errorCode === "GATEWAY_TIMEOUT" ? 504 : 500);
   }
-  return error.message ?? error.title ?? "Request failed.";
+  if (errorCode === "VALIDATION_ERROR") {
+    if (Array.isArray(error.errors) && typeof error.errors[0] === "string") {
+      return error.errors[0];
+    }
+    if (error.errors && typeof error.errors === "object") {
+      const first = Object.values(error.errors as Record<string, unknown>)[0];
+      if (Array.isArray(first) && typeof first[0] === "string") return first[0];
+    }
+  }
+  return typeof error.message === "string" && error.message.trim()
+    ? error.message.trim()
+    : fallback;
 }
 
 function getApiMessage(response: unknown): string | undefined {
@@ -310,11 +361,16 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-    body: body ?? null,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers,
+      body: body ?? null,
+    });
+  } catch {
+    throw new Error("Unable to connect to the server. Please check your connection and try again.");
+  }
 
   const raw = await response.text();
   let parsed: unknown = undefined;
@@ -332,14 +388,14 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   }
 
   if (!response.ok) {
-    const fallback = `Request failed with status ${response.status}.`;
+    const fallback = getStatusErrorMessage(response.status);
     if (parsed && typeof parsed === "object") {
       throw new Error(
-        formatApiError(parsed as { message?: string; title?: string; errors?: string[] }),
+        formatApiError(
+          parsed as { errorCode?: unknown; message?: unknown; errors?: unknown },
+          fallback,
+        ),
       );
-    }
-    if (typeof parsed === "string" && parsed.trim()) {
-      throw new Error(parsed);
     }
     throw new Error(fallback);
   }
@@ -353,9 +409,9 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     throw new Error(
       formatApiError(
         parsed as {
-          message?: string | null;
-          title?: string | null;
-          errors?: string[] | Record<string, string[]> | null;
+          errorCode?: unknown;
+          message?: unknown;
+          errors?: unknown;
         },
       ),
     );

@@ -23,10 +23,10 @@ public class BorrowBookCommandHandler : IRequestHandler<BorrowBookCommand, ApiRe
     {
         var book = await _bookRepository.GetBookByIdAsync(request.BookId, cancellationToken);
         if (book is null)
-            return ApiResponse<BorrowRecordDto>.Fail($"Book with ID {request.BookId} not found.");
+            return ApiResponse<BorrowRecordDto>.FailWithCode("NOT_FOUND", "Book not found.");
 
         if (book.AvailableCount <= 0)
-            return ApiResponse<BorrowRecordDto>.Fail("Book is out of stock.");
+            return ApiResponse<BorrowRecordDto>.FailWithCode("CONFLICT", "Book is out of stock.");
 
         var borrowedAt = DateTime.UtcNow;
         var record = new BorrowRecord

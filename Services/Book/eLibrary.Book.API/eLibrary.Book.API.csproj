@@ -23,5 +23,6 @@
   <ItemGroup>
     <ProjectReference Include="..\eLibrary.Book.Application\eLibrary.Book.Application.csproj" />
     <ProjectReference Include="..\eLibrary.Book.Infrastructure\eLibrary.Book.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Shared\eLibrary.Common.Api\eLibrary.Common.Api.csproj" />
   </ItemGroup>
 </Project>

@@ -36,7 +36,7 @@ public class GetBookByIdQueryHandler : IRequestHandler<GetBookByIdQuery, ApiResp
         {
             var book = await _bookRepository.GetBookByIdAsync(request.Id, cancellationToken);
             if (book == null)
-                return ApiResponse<BookDto>.Fail("Book not found.");
+                return ApiResponse<BookDto>.FailWithCode("NOT_FOUND", "Book not found.");
 
             var dto = new BookDto
             {
@@ -50,10 +50,16 @@ public class GetBookByIdQueryHandler : IRequestHandler<GetBookByIdQuery, ApiResp
 
             return ApiResponse<BookDto>.Ok(dto, "Book retrieved successfully.");
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving book {BookId}", request.Id);
-            return ApiResponse<BookDto>.Fail("An error occurred while retrieving the book.", ex.Message);
+            return ApiResponse<BookDto>.FailWithCode(
+                "INTERNAL_SERVER_ERROR",
+                "An error occurred while retrieving the book.");
         }
     }
 }

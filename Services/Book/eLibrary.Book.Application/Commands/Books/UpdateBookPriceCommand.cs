@@ -35,7 +35,7 @@ public sealed class UpdateBookPriceCommandHandler : IRequestHandler<UpdateBookPr
             var book = await _bookRepository.GetBookByIdAsync(request.BookId, cancellationToken);
             if (book is null)
             {
-                return ApiResponse<BookDto>.Fail("Book not found.");
+                return ApiResponse<BookDto>.FailWithCode("NOT_FOUND", "Book not found.");
             }
 
             book.Price = request.NewPrice;
@@ -53,10 +53,16 @@ public sealed class UpdateBookPriceCommandHandler : IRequestHandler<UpdateBookPr
                     : $"/api/Book/{book.Id}/cover"
             }, "Book price updated successfully.");
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating price for book {BookId}", request.BookId);
-            return ApiResponse<BookDto>.Fail("An error occurred while updating the book price.", ex.Message);
+            return ApiResponse<BookDto>.FailWithCode(
+                "INTERNAL_SERVER_ERROR",
+                "An error occurred while updating the book price.");
         }
     }
 }
