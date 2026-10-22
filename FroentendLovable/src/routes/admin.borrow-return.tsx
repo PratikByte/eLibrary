@@ -123,6 +123,7 @@ function AdminBorrowReturnPage() {
   const [isReturning, setIsReturning] = useState(false);
   const [recentTransactions, setRecentTransactions] = useState<BorrowTransactionDto[]>([]);
   const [recentTransactionsPage, setRecentTransactionsPage] = useState(1);
+  const [recentTransactionsTotalRecords, setRecentTransactionsTotalRecords] = useState(0);
   const [recentTransactionsTotalPages, setRecentTransactionsTotalPages] = useState(1);
   const [recentTransactionsError, setRecentTransactionsError] = useState<string | null>(null);
   const [isLoadingRecentTransactions, setIsLoadingRecentTransactions] = useState(true);
@@ -139,6 +140,7 @@ function AdminBorrowReturnPage() {
         if (isCurrent) {
           setRecentTransactions(response.items);
           setRecentTransactionsPage(response.pageNumber);
+          setRecentTransactionsTotalRecords(response.totalRecords);
           setRecentTransactionsTotalPages(response.totalPages || 1);
         }
       })
@@ -353,6 +355,8 @@ function AdminBorrowReturnPage() {
         </div>
         <ListPagination
           page={recentTransactionsPage}
+          pageSize={DEFAULT_PAGE_SIZE}
+          totalRecords={recentTransactionsTotalRecords}
           totalPages={recentTransactionsTotalPages}
           onPageChange={setRecentTransactionsPage}
         />

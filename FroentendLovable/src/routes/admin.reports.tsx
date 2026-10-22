@@ -42,7 +42,7 @@ function AdminReportsPage() {
     setAvailable(response.items.map(mapBookDto));
     setAvailablePage(response.pageNumber || pageNumber);
     setAvailableTotalPages(response.totalPages || 1);
-    setAvailableTotal(response.totalRecords || response.items.length);
+    setAvailableTotal(response.totalRecords);
   }
 
   useEffect(() => {
@@ -128,6 +128,8 @@ function AdminReportsPage() {
       />
       <ListPagination
         page={availablePage}
+        pageSize={DEFAULT_PAGE_SIZE}
+        totalRecords={availableTotal}
         totalPages={availableTotalPages}
         onPageChange={(next) => void loadAvailable(next).catch((requestError) => {
           setError(requestError instanceof Error ? requestError.message : "Unable to load available books.");

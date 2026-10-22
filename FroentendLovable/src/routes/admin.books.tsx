@@ -322,7 +322,13 @@ function AdminBooksPage() {
             </TableBody>
           </Table>
         </div>
-        <ListPagination page={page} totalPages={totalPages} onPageChange={(next) => void loadBooks(next)} />
+        <ListPagination
+          page={page}
+          pageSize={DEFAULT_PAGE_SIZE}
+          totalRecords={totalRecords}
+          totalPages={totalPages}
+          onPageChange={(next) => void loadBooks(next)}
+        />
       </SectionCard>
 
       <BookDetailsDialog

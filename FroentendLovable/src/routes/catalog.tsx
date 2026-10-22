@@ -48,6 +48,8 @@ function CatalogPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [author, setAuthor] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -77,16 +79,22 @@ function CatalogPage() {
           setBooks(response.items.map(mapBookDto));
           setPage(response.pageNumber || pageNumber);
           setTotalPages(response.totalPages || 1);
+          setTotalRecords(response.totalRecords);
+          setPageSize(DEFAULT_PAGE_SIZE);
         } else if (hasPriceRange) {
           const data = await getBooksByPriceRange(min, max);
           setBooks(data.map(mapBookDto));
           setPage(1);
           setTotalPages(1);
+          setTotalRecords(data.length);
+          setPageSize(Math.max(data.length, 1));
         } else {
           const response = await getBooksPaged(pageNumber, DEFAULT_PAGE_SIZE);
           setBooks(response.items.map(mapBookDto));
           setPage(response.pageNumber || pageNumber);
           setTotalPages(response.totalPages || 1);
+          setTotalRecords(response.totalRecords);
+          setPageSize(DEFAULT_PAGE_SIZE);
         }
       } catch (requestError) {
         setError(requestError instanceof Error ? requestError.message : "Unable to load books.");
@@ -220,7 +228,13 @@ function CatalogPage() {
             </div>
           ))}
         </div>
-        <ListPagination page={page} totalPages={totalPages} onPageChange={(next) => void loadBooks(next)} />
+        <ListPagination
+          page={page}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          totalPages={totalPages}
+          onPageChange={(next) => void loadBooks(next)}
+        />
       </div>
     </UserLayout>
   );

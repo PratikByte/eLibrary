@@ -296,6 +296,8 @@ function AdminUsersPage() {
         </div>
         <ListPagination
           page={page}
+          pageSize={DEFAULT_PAGE_SIZE}
+          totalRecords={totalRecords}
           totalPages={totalPages}
           onPageChange={(next) => void loadUsers(next, searchTerm, roleFilter)}
         />
