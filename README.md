@@ -6,13 +6,9 @@ Users can **borrow and return books**, while admins can **manage books and view 
 The system automatically updates **book availability** and sends **email notifications** for borrow and return actions.
 
 ---
-🌐 Live API
 
-🚀 Live Swagger Documentation
+The browser entry point is the API Gateway at `http://localhost:8000`. Identity Swagger is on port 8001 and Book Swagger is on port 8002.
 
-👉 https://elibrary-vmhy.onrender.com/swagger/index.html
-
-You can directly test the API endpoints from the deployed Swagger UI.
 ---
 
 ## 🚀 Features
@@ -32,21 +28,19 @@ You can directly test the API endpoints from the deployed Swagger UI.
 * ASP.NET Core Web API
 * C#
 * Entity Framework Core
-* SQL Server
+* PostgreSQL
+* MongoDB for book covers and profile images
 * JWT Authentication
-* Clean Architecture
+* API Gateway (Ocelot)
+* Identity, Book, borrow/return, and reports services
 * CQRS Pattern
-* Docker
-* Render Deployment
 
 ---
 ## ☁ Deployment
 
-The API is deployed using cloud services and containerization:
+Run the services locally with `start-eLibrary-all.ps1`. PostgreSQL database `eLibrary` and MongoDB database `elibrary_media` must already be available.
 
-- **Render** – Hosts the ASP.NET Core API
-- **Railway** – Provides the MySQL database
-- **Docker** – Used for containerizing the application
+The frontend Dockerfile is in `FroentendLovable/Dockerfile`. Service Dockerfiles and a Docker Compose file are not part of this solution yet. `ocelot.docker.json` is ready for container host names `identity` and `book` when that stack is added.
 ---
 
 ## 📷 API Documentation (Swagger)
@@ -78,37 +72,38 @@ git clone https://github.com/PratikByte/eLibrary.git
 cd eLibrary
 ```
 
-Run database migrations:
+Start PostgreSQL on port 5432 and MongoDB on port 27017, then launch the services and frontend:
 
-```bash
-dotnet ef database update
+```powershell
+.\start-eLibrary-all.ps1
 ```
 
-Run the application:
+The script starts:
 
-```bash
-dotnet run
-```
+| App | URL |
+|-----|-----|
+| Gateway | http://localhost:8000 |
+| Identity | http://localhost:8001/swagger |
+| Book, borrow/return, and reports | http://localhost:8002/swagger |
+| Frontend | http://localhost:3001 |
 
-Open Swagger UI:
+The frontend calls the Gateway. `FroentendLovable/.env.example` sets `VITE_API_BASE_URL=http://localhost:8000`.
 
-```
-http://localhost:5285/swagger/index.html
-```
+Apply the Identity and Book migrations from their API projects when the databases are empty. Each service keeps its own EF Core history table in the shared `eLibrary` PostgreSQL database.
 
 ---
 
 ## 📂 Project Architecture
 
 ```
-API
-Application
-Domain
-Infrastructure
-Shared
+Services/Gateway     public API entry
+Services/Identity    users, login, profiles
+Services/Book        catalog, borrow/return, reports
+Services/Shared      shared API error handling
+FroentendLovable     React frontend
 ```
 
-The project follows **Clean Architecture with CQRS**, ensuring better separation of concerns and maintainability.
+Borrow/return and reports stay inside the Book service because a borrow updates book availability in the same database transaction.
 
 ---
 

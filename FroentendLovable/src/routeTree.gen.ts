@@ -8,22 +8,22 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
+import { Route as rootRouteImport } from './routes/__root.tsx'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CatalogRouteImport } from './routes/catalog'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as MyLoansRouteImport } from './routes/my-loans'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as RegisterRouteImport } from './routes/register'
-import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as AdminBooksRouteImport } from './routes/admin.books'
-import { Route as AdminBorrowReturnRouteImport } from './routes/admin.borrow-return'
-import { Route as AdminProfileRouteImport } from './routes/admin.profile'
-import { Route as AdminReportsRouteImport } from './routes/admin.reports'
-import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
-import { Route as AdminUsersRouteImport } from './routes/admin.users'
-import { Route as BooksBookIdRouteImport } from './routes/books.$bookId'
+import { Route as CatalogRouteImport } from './routes/catalog.tsx'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password.tsx'
+import { Route as LoginRouteImport } from './routes/login.tsx'
+import { Route as MyLoansRouteImport } from './routes/my-loans.tsx'
+import { Route as ProfileRouteImport } from './routes/profile.tsx'
+import { Route as RegisterRouteImport } from './routes/register.tsx'
+import { Route as AdminIndexRouteImport } from './routes/admin.index.tsx'
+import { Route as AdminBooksRouteImport } from './routes/admin.books.tsx'
+import { Route as AdminBorrowReturnRouteImport } from './routes/admin.borrow-return.tsx'
+import { Route as AdminProfileRouteImport } from './routes/admin.profile.tsx'
+import { Route as AdminReportsRouteImport } from './routes/admin.reports.tsx'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings.tsx'
+import { Route as AdminUsersRouteImport } from './routes/admin.users.tsx'
+import { Route as BooksBookIdRouteImport } from './routes/books.$bookId.tsx'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
