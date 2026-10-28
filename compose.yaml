@@ -1,0 +1,160 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: eLibrary
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d eLibrary"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - elibrary
+
+  mongo:
+    image: mongo:8.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?Set MONGO_ROOT_USER in .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - elibrary
+
+  identity-migrate:
+    image: ${DOCKERHUB_USERNAME:?Set DOCKERHUB_USERNAME in .env}/elibrary:identity-${IMAGE_TAG:-latest}
+    entrypoint: ["/app/migrations/efbundle"]
+    command:
+      - --connection
+      - "Host=postgres;Port=5432;Database=eLibrary;Username=${POSTGRES_USER:?Set POSTGRES_USER in .env};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+    working_dir: /app/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - elibrary
+
+  book-migrate:
+    image: ${DOCKERHUB_USERNAME:?Set DOCKERHUB_USERNAME in .env}/elibrary:book-${IMAGE_TAG:-latest}
+    entrypoint: ["/app/migrations/efbundle"]
+    command:
+      - --connection
+      - "Host=postgres;Port=5432;Database=eLibrary;Username=${POSTGRES_USER:?Set POSTGRES_USER in .env};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+    working_dir: /app/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - elibrary
+
+  identity:
+    image: ${DOCKERHUB_USERNAME:?Set DOCKERHUB_USERNAME in .env}/elibrary:identity-${IMAGE_TAG:-latest}
+    environment:
+      ASPNETCORE_URLS: http://+:8001
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=eLibrary;Username=${POSTGRES_USER:?Set POSTGRES_USER in .env};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+      MongoDB__ConnectionString: "mongodb://${MONGO_ROOT_USER:?Set MONGO_ROOT_USER in .env}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}@mongo:27017/?authSource=admin"
+      MongoDB__Database: elibrary_media
+      MongoDB__Collection: media
+      JwtSettings__Key: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+      JwtSettings__Issuer: eLibrary
+      JwtSettings__Audience: eLibraryUsers
+      IdentitySeed__AdminUsername: admin
+      IdentitySeed__AdminEmail: admin@elibrary.local
+      IdentitySeed__AdminPassword: ${IDENTITY_ADMIN_PASSWORD:?Set IDENTITY_ADMIN_PASSWORD in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      identity-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - elibrary
+
+  book:
+    image: ${DOCKERHUB_USERNAME:?Set DOCKERHUB_USERNAME in .env}/elibrary:book-${IMAGE_TAG:-latest}
+    environment:
+      ASPNETCORE_URLS: http://+:8002
+      ASPNETCORE_ENVIRONMENT: Docker
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=eLibrary;Username=${POSTGRES_USER:?Set POSTGRES_USER in .env};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+      MongoDB__ConnectionString: "mongodb://${MONGO_ROOT_USER:?Set MONGO_ROOT_USER in .env}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}@mongo:27017/?authSource=admin"
+      MongoDB__Database: elibrary_media
+      MongoDB__Collection: media
+      JwtSettings__Key: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+      JwtSettings__Issuer: eLibrary
+      JwtSettings__Audience: eLibraryUsers
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      book-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - elibrary
+
+  gateway:
+    image: ${DOCKERHUB_USERNAME:?Set DOCKERHUB_USERNAME in .env}/elibrary:gateway-${IMAGE_TAG:-latest}
+    environment:
+      ASPNETCORE_URLS: http://+:8000
+      DOTNET_ENVIRONMENT: Docker
+      JwtSettings__Key: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+      JwtSettings__Issuer: eLibrary
+      JwtSettings__Audience: eLibraryUsers
+      Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
+    ports:
+      - "${UBUNTU_LAN_IP:?Set UBUNTU_LAN_IP in .env}:8000:8000"
+    depends_on:
+      - identity
+      - book
+    restart: unless-stopped
+    networks:
+      - elibrary
+
+  frontend:
+    image: ${DOCKERHUB_USERNAME:?Set DOCKERHUB_USERNAME in .env}/elibrary:frontend-${IMAGE_TAG:-latest}
+    ports:
+      - "${UBUNTU_LAN_IP:?Set UBUNTU_LAN_IP in .env}:3001:3001"
+    depends_on:
+      - gateway
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - elibrary
+
+volumes:
+  postgres_data:
+  mongo_data:
+
+networks:
+  elibrary:
+    driver: bridge

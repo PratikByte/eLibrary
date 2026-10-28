@@ -1,0 +1,22 @@
+services:
+  identity:
+    build:
+      context: .
+      dockerfile: Services/Identity/eLibrary.Identity.API/Dockerfile
+
+  book:
+    build:
+      context: .
+      dockerfile: Services/Book/eLibrary.Book.API/Dockerfile
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Services/Gateway/eLibrary.Gateway.API/Dockerfile
+
+  frontend:
+    build:
+      context: ./FroentendLovable
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${PUBLIC_API_BASE_URL:?Set PUBLIC_API_BASE_URL in .env}
