@@ -3,9 +3,12 @@ import { Library, Users, ArrowLeftRight, AlertTriangle, Plus, BarChart3 } from "
 import { AdminLayout } from "@/components/AdminLayout";
 import { SectionCard } from "@/components/SectionCard";
 import { StatCard } from "@/components/StatCard";
+import { ListPagination } from "@/components/list-pagination";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  DEFAULT_PAGE_SIZE,
+  getActiveBorrowRecords,
   getBooksPaged,
   getOverdueBooksReport,
   getRecentActivity,
@@ -36,24 +39,46 @@ export const Route = createFileRoute("/admin/")({
 function AdminDashboardPage() {
   const [bookCount, setBookCount] = useState<string>("—");
   const [memberCount, setMemberCount] = useState<string>("—");
+  const [activeLoanCount, setActiveLoanCount] = useState<string>("—");
+  const [loansDueThisWeek, setLoansDueThisWeek] = useState<string>("—");
   const [overdue, setOverdue] = useState<BorrowRecordDto[]>([]);
+  const [overduePage, setOverduePage] = useState(1);
   const [recentActivity, setRecentActivity] = useState<RecentActivityDto[]>([]);
   const [isLoadingActivity, setIsLoadingActivity] = useState(true);
   const [activityError, setActivityError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getBooksPaged(1, 1), getUsersPaged(1, 1), getOverdueBooksReport()])
-      .then(([books, users, overdueRows]) => {
+    Promise.all([
+      getBooksPaged(1, 1),
+      getUsersPaged(1, 1),
+      getOverdueBooksReport(),
+      getActiveBorrowRecords(),
+    ])
+      .then(([books, users, overdueRows, activeLoans]) => {
         if (cancelled) return;
-        setBookCount(String(books.totalRecords ?? books.data?.length ?? 0));
-        setMemberCount(String(users.totalRecords ?? users.data?.length ?? 0));
+        setBookCount(String(books.totalRecords));
+        setMemberCount(String(users.totalRecords));
         setOverdue(overdueRows);
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+        const weekFromToday = new Date(today);
+        weekFromToday.setUTCDate(weekFromToday.getUTCDate() + 7);
+        const dueThisWeekCount = activeLoans.filter((loan) => {
+          const dueDate = new Date(loan.dueDate);
+          if (Number.isNaN(dueDate.getTime())) return false;
+          dueDate.setUTCHours(0, 0, 0, 0);
+          return dueDate >= today && dueDate <= weekFromToday;
+        }).length;
+        setActiveLoanCount(String(activeLoans.length));
+        setLoansDueThisWeek(String(dueThisWeekCount));
       })
       .catch(() => {
         if (!cancelled) {
           setBookCount("—");
           setMemberCount("—");
+          setActiveLoanCount("—");
+          setLoansDueThisWeek("—");
         }
       });
     return () => {
@@ -87,13 +112,14 @@ function AdminDashboardPage() {
   }, []);
 
   const overdueFines = overdue.reduce((sum, loan) => sum + (loan.fine ?? 0), 0);
+  const overdueTotalPages = Math.max(1, Math.ceil(overdue.length / DEFAULT_PAGE_SIZE));
+  const visibleOverdue = overdue.slice(
+    (overduePage - 1) * DEFAULT_PAGE_SIZE,
+    overduePage * DEFAULT_PAGE_SIZE,
+  );
 
   return (
-    <AdminLayout
-      title="Dashboard"
-      subtitle="Overview of your library"
-      searchPlaceholder="Search library…"
-    >
+    <AdminLayout title="Dashboard" subtitle="Overview of your library">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Total books"
@@ -113,8 +139,8 @@ function AdminDashboardPage() {
         />
         <StatCard
           label="Active loans"
-          value="87"
-          hint="12 due this week"
+          value={activeLoanCount}
+          hint={`${loansDueThisWeek} due this week`}
           icon={ArrowLeftRight}
           iconBgColor="#DDF5EE"
           iconColor="#008A72"
@@ -186,7 +212,7 @@ function AdminDashboardPage() {
 
       <SectionCard title="Overdue loans" description="Books past their return date">
         <ul className="divide-y divide-border">
-          {overdue.map((loan) => (
+          {visibleOverdue.map((loan) => (
             <li key={loan.id} className="flex items-center justify-between gap-3 py-3 text-sm">
               <div className="min-w-0">
                 <p className="truncate font-medium">{loan.bookName ?? "Unknown book"}</p>
@@ -198,6 +224,13 @@ function AdminDashboardPage() {
             </li>
           ))}
         </ul>
+        <ListPagination
+          page={overduePage}
+          pageSize={DEFAULT_PAGE_SIZE}
+          totalRecords={overdue.length}
+          totalPages={overdueTotalPages}
+          onPageChange={setOverduePage}
+        />
       </SectionCard>
     </AdminLayout>
   );

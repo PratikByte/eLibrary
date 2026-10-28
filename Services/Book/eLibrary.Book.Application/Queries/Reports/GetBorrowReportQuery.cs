@@ -1,3 +1,4 @@
+using eLibrary.Book.Application.Common.Helpers;
 using eLibrary.Book.Application.DTOs;
 using eLibrary.Book.Application.Interfaces.Repositories;
 using eLibrary.Book.Application.Shared;
@@ -20,6 +21,7 @@ public class GetBorrowReportQueryHandler : IRequestHandler<GetBorrowReportQuery,
     {
         var records = await _borrowRepository.GetOverdueAsync(cancellationToken);
         var dtos = new List<BorrowRecordDto>();
+        var asOfDate = DateTime.UtcNow;
 
         foreach (var record in records)
         {
@@ -34,7 +36,7 @@ public class GetBorrowReportQueryHandler : IRequestHandler<GetBorrowReportQuery,
                 DueDate = record.DueDate.ToString("yyyy-MM-dd"),
                 ReturnDate = record.ReturnDate?.ToString("yyyy-MM-dd") ?? "Not Returned",
                 IsReturned = record.IsReturned,
-                Fine = record.Fine
+                Fine = BorrowFineCalculator.Calculate(record.DueDate, asOfDate)
             });
         }
 
