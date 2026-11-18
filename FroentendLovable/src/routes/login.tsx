@@ -47,10 +47,7 @@ function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await login(
-        String(formData.get("username") ?? ""),
-        submittedPassword,
-      );
+      const response = await login(String(formData.get("username") ?? ""), submittedPassword);
       if (response.role.toLowerCase() === "admin") {
         await navigate({ to: "/admin" });
       } else {
@@ -68,52 +65,52 @@ function LoginPage() {
       {isSubmitting ? (
         <Loader label="Login..." />
       ) : (
-        <form className="space-y-4" onSubmit={handleSubmit}>
-        <div className="space-y-2">
-          <Label htmlFor="username">Username</Label>
-          <Input id="username" name="username" autoComplete="username" required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <div className="relative">
-            <Input
-              id="password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              className="pr-10"
-              value={password}
-              onChange={(event) => {
-                const value = event.target.value;
-                setPassword(value);
-                setPasswordError(validatePassword(value));
-              }}
-              required
-              aria-invalid={Boolean(passwordError)}
-              aria-describedby={passwordError ? "login-password-error" : undefined}
-            />
-            {password ? (
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 z-10 flex w-10 items-center justify-center text-foreground opacity-100 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                onClick={() => setShowPassword((visible) => !visible)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                title={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+        <form className="space-y-4" method="post" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input id="username" name="username" autoComplete="username" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                className="pr-10"
+                value={password}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setPassword(value);
+                  setPasswordError(validatePassword(value));
+                }}
+                required
+                aria-invalid={Boolean(passwordError)}
+                aria-describedby={passwordError ? "login-password-error" : undefined}
+              />
+              {password ? (
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 z-10 flex w-10 items-center justify-center text-foreground opacity-100 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              ) : null}
+            </div>
+            {passwordError ? (
+              <p id="login-password-error" className="text-sm text-destructive">
+                {passwordError}
+              </p>
             ) : null}
           </div>
-          {passwordError ? (
-            <p id="login-password-error" className="text-sm text-destructive">
-              {passwordError}
-            </p>
-          ) : null}
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Signing in..." : "Sign in"}
-        </Button>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Signing in..." : "Sign in"}
+          </Button>
         </form>
       )}
 
